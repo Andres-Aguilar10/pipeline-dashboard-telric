@@ -49,7 +49,7 @@ function getRangoId(qty) {
 // hist:       { opId: { prendas, wips: { wipId: { textil_total, manuf_total } } } }
 // gastosHist: { opId: { prendas, cif, ga, gv, avios, mp } }
 // ═══════════════════════════════════════════
-const WIP_UMBRAL_PCT = 20;
+const WIP_UMBRAL_PCT = 10;
 function buildCotizador(hist, gastosHist, qty) {
   const allHistOps = Object.entries(hist);
   if (allHistOps.length === 0) return null;
@@ -66,21 +66,20 @@ function buildCotizador(hist, gastosHist, qty) {
     { id: "promedio", name: "Promedio General", min: 200, max: 999999 },
   ];
 
-  // First pass: determine wips_op via promedio
+  // First pass: determine wips_op via promedio — umbral por cantidad de OPs (no prendas)
   const promedioOps = allHistOps.filter(([, d]) => d.prendas >= 200);
-  const promedioMaxPrendas = {};
-  let globalMaxPrendas = 0;
+  const opsCountByWip = {};
+  let globalMaxOps = 0;
   for (const w of allHistWips) {
     const opsConWip = promedioOps.filter(([, d]) => d.wips[w]);
     if (opsConWip.length === 0) continue;
-    const sumPrendas = opsConWip.reduce((a, [, d]) => a + d.prendas, 0);
-    promedioMaxPrendas[w] = sumPrendas;
-    if (sumPrendas > globalMaxPrendas) globalMaxPrendas = sumPrendas;
+    opsCountByWip[w] = opsConWip.length;
+    if (opsConWip.length > globalMaxOps) globalMaxOps = opsConWip.length;
   }
 
   const wipsOP = [];
-  for (const [w, prendas] of Object.entries(promedioMaxPrendas)) {
-    const pct = globalMaxPrendas > 0 ? prendas / globalMaxPrendas * 100 : 0;
+  for (const [w, count] of Object.entries(opsCountByWip)) {
+    const pct = globalMaxOps > 0 ? count / globalMaxOps * 100 : 0;
     if (pct >= WIP_UMBRAL_PCT) wipsOP.push(w);
   }
   const wipsOPSet = new Set(wipsOP);
