@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Pipeline Dashboard — Layout Preview</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#e2e8f0;padding:0;font-size:13px}
+
+/* ── HEADER ── */
+.header{background:#1e293b;border-bottom:1px solid #334155;padding:10px 20px;display:flex;align-items:center;gap:12px}
+.header h1{font-size:1rem;font-weight:700;color:#f1f5f9}
+.header .badge{font-size:.7rem;background:#334155;color:#94a3b8;padding:2px 8px;border-radius:4px}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:6px;padding:12px 20px 0;border-bottom:1px solid #334155;background:#1e293b}
+.tab{padding:8px 16px;border-radius:6px 6px 0 0;font-size:.8rem;font-weight:500;cursor:pointer;border:1px solid transparent;border-bottom:none;color:#94a3b8}
+.tab.active{background:#0f172a;border-color:#334155;color:#f1f5f9}
+.tab.active.emerald{color:#34d399;border-top:2px solid #34d399}
+.tab .cnt{font-size:.7rem;background:#334155;border-radius:10px;padding:1px 6px;margin-left:4px}
+.tab-analytics{margin-left:auto;background:#1d4ed820;border-color:#3b82f640;color:#60a5fa}
+.tab-analytics.active{background:#1d4ed840;color:#93c5fd;border-top:2px solid #3b82f6}
+
+/* ── MAIN LAYOUT ── */
+.main{display:grid;grid-template-columns:1fr 380px;min-height:calc(100vh - 90px)}
+.left{padding:16px 20px;border-right:1px solid #1e293b}
+.right{background:#1e293b;border-left:1px solid #334155;padding:16px}
+
+/* ── KPI CARDS ── */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.kpi{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px 14px}
+.kpi .val{font-size:1.4rem;font-weight:700;color:#34d399}
+.kpi .lbl{font-size:.7rem;color:#64748b;margin-top:2px}
+
+/* ── ANALYTICS SECTION (inline, collapsible) ── */
+.analytics-bar{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.analytics-bar span{font-size:.78rem;font-weight:600;color:#60a5fa}
+.analytics-bar .toggle{font-size:.7rem;color:#64748b}
+
+.analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.analytics-grid-full{margin-bottom:10px}
+.chart-card{background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px}
+.chart-card h3{font-size:.72rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+.chart-placeholder{background:#0f172a;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#334155;font-size:.75rem;font-weight:500}
+.chart-placeholder.h160{height:160px}
+.chart-placeholder.h200{height:200px}
+.chart-placeholder.h120{height:120px}
+
+/* KPI mini row */
+.kpi-mini{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px}
+.kpi-m{background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:8px 10px;text-align:center}
+.kpi-m .v{font-size:1.1rem;font-weight:700}
+.kpi-m .l{font-size:.65rem;color:#64748b;margin-top:2px}
+.red{color:#f87171}.green{color:#4ade80}.amber{color:#fbbf24}.blue{color:#60a5fa}.purple{color:#a78bfa}
+
+/* ── TABLE ── */
+.table-wrap{background:#1e293b;border:1px solid #334155;border-radius:8px;overflow:hidden}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #334155}
+.table-header span{font-size:.78rem;font-weight:600;color:#94a3b8}
+.search{background:#0f172a;border:1px solid #334155;border-radius:6px;padding:5px 10px;font-size:.75rem;color:#e2e8f0;width:180px}
+table{width:100%;border-collapse:collapse;font-size:.75rem}
+th{background:#0f172a;padding:8px 10px;text-align:left;color:#64748b;font-weight:500;border-bottom:1px solid #334155}
+td{padding:7px 10px;border-bottom:1px solid #1e293b;color:#cbd5e1}
+tr:hover td{background:#0f172a30}
+.badge-status{padding:2px 7px;border-radius:4px;font-size:.68rem;font-weight:600}
+.badge-in{background:#064e3b;color:#34d399}
+.badge-ni{background:#451a03;color:#fbbf24}
+.badge-po{background:#450a0a;color:#f87171}
+.wip-bar{background:#1e293b;border-radius:3px;height:5px;width:60px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:4px}
+.wip-fill{background:#34d399;height:100%}
+.loss{color:#f87171;font-size:.7rem}
+.gain{color:#34d399;font-size:.7rem}
+.row-active td{background:#172554!important}
+
+/* ── SIDE PANEL ── */
+.panel-title{font-size:.85rem;font-weight:700;color:#f1f5f9;margin-bottom:4px}
+.panel-sub{font-size:.7rem;color:#64748b;margin-bottom:14px}
+.panel-section{margin-bottom:14px}
+.panel-section h4{font-size:.7rem;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid #334155}
+.cot-table{width:100%;font-size:.72rem;border-collapse:collapse}
+.cot-table th{color:#64748b;font-weight:500;padding:4px 6px;text-align:right;border-bottom:1px solid #1e293b}
+.cot-table th:first-child,.cot-table td:first-child{text-align:left}
+.cot-table td{padding:4px 6px;border-bottom:1px solid #1e293b22;text-align:right}
+.badge-real{background:#064e3b;color:#34d399;padding:1px 5px;border-radius:3px;font-size:.65rem}
+.badge-cot{background:#1e3a5f;color:#60a5fa;padding:1px 5px;border-radius:3px;font-size:.65rem}
+.total-row td{font-weight:700;color:#f1f5f9;border-top:1px solid #334155;padding-top:6px}
+.rango-active{background:#1d4ed8;color:#fff;border-radius:4px;padding:2px 4px}
+.precio-cliente{background:#1e293b;border:1px solid #334155;border-radius:6px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.precio-cliente .lbl{font-size:.7rem;color:#64748b}
+.precio-cliente .val{font-size:1rem;font-weight:700;color:#fbbf24}
+.margen-neg{color:#f87171;font-size:.8rem;font-weight:600}
+
+/* Annotation arrows */
+.annotation{position:relative}
+.arrow-label{font-size:.68rem;color:#64748b;font-style:italic}
+
+/* Section labels */
+.section-label{font-size:.7rem;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.1em;margin:16px 0 8px;display:flex;align-items:center;gap:8px}
+.section-label::after{content:'';flex:1;height:1px;background:#1e293b}
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <h1>Pipeline TdV</h1>
+  <span class="badge">z0 · 2026-03-18</span>
+  <span class="badge" style="color:#34d399">1,077 EN PRODUCCIÓN</span>
+  <span style="margin-left:auto;font-size:.72rem;color:#475569">última corrida: 2026-03-11</span>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab">Todos <span class="cnt">1,385</span></div>
+  <div class="tab">No Iniciadas <span class="cnt">307</span></div>
+  <div class="tab active emerald">En Producción <span class="cnt">1,077</span></div>
+  <div class="tab">Solo PO <span class="cnt">1</span></div>
+  <div class="tab tab-analytics active">📊 Análisis</div>
+</div>
+
+<!-- MAIN GRID -->
+<div class="main">
+
+  <!-- LEFT SIDE -->
+  <div class="left">
+
+    <!-- KPI CARDS (dinámicos según tab activo) -->
+    <div class="kpis">
+      <div class="kpi"><div class="val" style="color:#34d399">1,077</div><div class="lbl">OPs En Producción</div></div>
+      <div class="kpi"><div class="val" style="color:#a78bfa">34%</div><div class="lbl">Avance promedio WIPs</div></div>
+      <div class="kpi"><div class="val" style="color:#f87171">142</div><div class="lbl">OPs con pérdida estimada</div></div>
+      <div class="kpi"><div class="val" style="color:#fbbf24">553</div><div class="lbl">OPs con costos reales</div></div>
+    </div>
+
+    <!-- ANALYTICS SECTION (colapsable, solo cuando tab = Analytics o IN) -->
+    <div class="analytics-bar">
+      <span>📊 Análisis de costos y precios — EN PRODUCCIÓN</span>
+      <span class="toggle">▲ ocultar</span>
+    </div>
+
+    <!-- KPI MINI -->
+    <div class="kpi-mini">
+      <div class="kpi-m"><div class="v red">$627K</div><div class="l">Pérdida total</div></div>
+      <div class="kpi-m"><div class="v green">$997K</div><div class="l">Ganancia total</div></div>
+      <div class="kpi-m"><div class="v green">$369K</div><div class="l">Neto estimado</div></div>
+      <div class="kpi-m"><div class="v amber">231</div><div class="l">OPs con precio</div></div>
+      <div class="kpi-m"><div class="v blue">846</div><div class="l">Sin precio cliente</div></div>
+    </div>
+
+    <!-- CHARTS ROW 1 -->
+    <div class="analytics-grid">
+      <div class="chart-card">
+        <h3>Avance WIPs por OP</h3>
+        <div class="chart-placeholder h160">[Barras: 0% · 1-25% · 26-50% · 51-75% · 76-99%]</div>
+      </div>
+      <div class="chart-card">
+        <h3>OPs por marca</h3>
+        <div class="chart-placeholder h160">[Donut: LULU 54% · GREY 17% · OTHERS 17% · PATA 10%]</div>
+      </div>
+    </div>
+
+    <!-- CHARTS ROW 2 (full width) -->
+    <div class="analytics-grid-full chart-card" style="margin-bottom:10px">
+      <h3>Impacto monetario — Precio vs Costo (231 OPs con precio) · burbuja = $ total en juego</h3>
+      <div class="chart-placeholder h200">[Bubble chart: eje X = precio cliente · eje Y = costo cotizador · rojo = pérdida · verde = ganancia · tamaño = prendas × gap]</div>
+    </div>
+
+    <!-- CHARTS ROW 3 -->
+    <div class="analytics-grid-full chart-card">
+      <h3>Top 15 OPs — mayor pérdida / ganancia estimada ($)</h3>
+      <div class="chart-placeholder h120">[Barras horizontales: OP 87940 -$49K · OP 87942 -$37K · ...]</div>
+    </div>
+
+    <!-- DIVIDER -->
+    <div class="section-label">Detalle de OPs</div>
+
+    <!-- TABLE -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <span>1,077 OPs · En Producción</span>
+        <input class="search" placeholder="Buscar OP, marca...">
+      </div>
+      <table>
+        <tr>
+          <th>OP</th><th>Marca</th><th>Estilo</th><th>Prendas</th><th>Avance WIPs</th><th>Costo</th><th>Precio</th><th>Margen</th><th>Entrega</th>
+        </tr>
+        <tr class="row-active">
+          <td><b>86768</b></td>
+          <td>LULU</td>
+          <td style="color:#64748b">LM3FWCS</td>
+          <td>2,976</td>
+          <td>
+            71%
+            <div class="wip-bar"><div class="wip-fill" style="width:71%"></div></div>
+          </td>
+          <td>$6.57</td>
+          <td style="color:#64748b">—</td>
+          <td style="color:#64748b">—</td>
+          <td style="color:#64748b">—</td>
+        </tr>
+        <tr>
+          <td>87940</td>
+          <td>LULU</td>
+          <td style="color:#64748b">LM3XXXX</td>
+          <td>1,200</td>
+          <td>40% <div class="wip-bar"><div class="wip-fill" style="width:40%"></div></div></td>
+          <td>$18.44</td>
+          <td>$10.14</td>
+          <td class="loss">-$49.6K ↓</td>
+          <td style="color:#f87171">Feb 15 !</td>
+        </tr>
+        <tr>
+          <td>85274</td>
+          <td>LULU</td>
+          <td style="color:#64748b">LM3FWCS</td>
+          <td>860</td>
+          <td>83% <div class="wip-bar"><div class="wip-fill" style="width:83%"></div></div></td>
+          <td>$19.23</td>
+          <td>$22.00</td>
+          <td class="gain">+$2.4K ↑</td>
+          <td>Mar 30</td>
+        </tr>
+        <tr>
+          <td>88001</td>
+          <td>GREY</td>
+          <td style="color:#64748b">GR4ABC</td>
+          <td>450</td>
+          <td>20% <div class="wip-bar"><div class="wip-fill" style="width:20%"></div></div></td>
+          <td style="color:#64748b">—</td>
+          <td style="color:#64748b">—</td>
+          <td style="color:#64748b">Sin cotiz.</td>
+          <td>Apr 10</td>
+        </tr>
+        <tr>
+          <td colspan="9" style="color:#475569;text-align:center;padding:10px">… 1,073 más …</td>
+        </tr>
+      </table>
+    </div>
+
+  </div><!-- /left -->
+
+  <!-- RIGHT PANEL (cotizador seleccionado) -->
+  <div class="right">
+    <div class="panel-title">OP 86768 — LULU</div>
+    <div class="panel-sub">LM3FWCS · 2,976 prendas · Rango Grande · Recurrente · Híbrido (5 WIPs reales)</div>
+
+    <div class="panel-section">
+      <h4>WIPs de Proceso</h4>
+      <table class="cot-table">
+        <tr><th>ID</th><th>WIP</th><th>Fuente</th><th class="rango-active" style="background:#1d4ed8;color:#fff;border-radius:4px">Grande</th></tr>
+        <tr><td>16</td><td>Tejeduría</td><td><span class="badge-real">Real</span></td><td>$0.15</td></tr>
+        <tr><td>19a</td><td>Tintorería</td><td><span class="badge-real">Real</span></td><td>$2.15</td></tr>
+        <tr><td>19c</td><td>Tinto Acabado</td><td><span class="badge-cot">Cotizado</span></td><td>$0.00</td></tr>
+        <tr><td>34</td><td>Corte</td><td><span class="badge-real">Real</span></td><td>$0.30</td></tr>
+        <tr><td>40</td><td>Costura</td><td><span class="badge-real">Real</span></td><td>$1.12</td></tr>
+        <tr><td>43</td><td>Bordado</td><td><span class="badge-real">Real</span></td><td>$0.04</td></tr>
+        <tr><td>49</td><td>Acabado</td><td><span class="badge-cot">Cotizado</span></td><td>$0.26</td></tr>
+        <tr class="total-row"><td colspan="3">Subtotal WIPs</td><td>$4.02</td></tr>
+      </table>
+    </div>
+
+    <div class="panel-section">
+      <h4>Materiales</h4>
+      <table class="cot-table">
+        <tr><th>Concepto</th><th>Fuente</th><th class="rango-active" style="background:#1d4ed8;color:#fff;border-radius:4px">Grande</th></tr>
+        <tr><td>Materia Prima</td><td><span class="badge-real">Real</span></td><td>$0.08</td></tr>
+        <tr><td>Avíos</td><td><span class="badge-real">Real</span></td><td>$0.14</td></tr>
+        <tr class="total-row"><td colspan="2">Subtotal</td><td>$0.22</td></tr>
+      </table>
+    </div>
+
+    <div class="panel-section">
+      <h4>Gastos Indirectos</h4>
+      <table class="cot-table">
+        <tr><th>Concepto</th><th>Fuente</th><th class="rango-active" style="background:#1d4ed8;color:#fff;border-radius:4px">Grande</th></tr>
+        <tr><td>CIF</td><td><span class="badge-cot">Cotizado</span></td><td>$1.04</td></tr>
+        <tr><td>GA</td><td><span class="badge-cot">Cotizado</span></td><td>$0.71</td></tr>
+        <tr><td>GV</td><td><span class="badge-cot">Cotizado</span></td><td>$0.58</td></tr>
+        <tr class="total-row"><td colspan="2">Subtotal</td><td>$2.33</td></tr>
+      </table>
+    </div>
+
+    <table class="cot-table" style="margin-top:4px">
+      <tr class="total-row" style="font-size:.85rem"><td colspan="2">COSTO TOTAL</td><td style="color:#f1f5f9;font-size:1rem">$6.57</td></tr>
+    </table>
+
+    <div class="precio-cliente">
+      <div>
+        <div class="lbl">Precio cliente</div>
+        <div class="val">— sin precio —</div>
+      </div>
+      <div style="text-align:right">
+        <div class="lbl">Margen</div>
+        <div style="color:#64748b;font-size:.8rem">N/D</div>
+      </div>
+    </div>
+  </div><!-- /right -->
+
+</div><!-- /main -->
+
+</body>
+</html>
