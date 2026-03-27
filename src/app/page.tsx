@@ -197,8 +197,8 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/data/z0.json").then((r) => r.json()),
-      fetch("/data/z1.json").then((r) => r.json()),
+      fetch(`/data/z0.json?v=${Date.now()}`).then((r) => r.json()),
+      fetch(`/data/z1.json?v=${Date.now()}`).then((r) => r.json()),
     ])
       .then(([z0, z1]) => { setZ0Data(z0); setZ1Data(z1); })
       .catch((e) => setError(e.message))
