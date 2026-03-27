@@ -86,23 +86,6 @@ function buildCotizador(hist, gastosHist, qty, flatIndirectos) {
   }
   const wipsOPSet = new Set(wipsOP);
 
-  // ── MP/avíos: proximidad ponderada sobre TODAS las OPs históricas (sin filtro de rango)
-  const allGastosOps = Object.values(gastosHist);
-  const opsConAviosAll = allGastosOps.filter(g => g.avios > 0 && g.prendas > 0);
-  let aviosProx = 0;
-  if (opsConAviosAll.length > 0) {
-    const pesos  = opsConAviosAll.map(g => 1 / (1 + Math.abs(g.prendas - qty)));
-    const sumP   = pesos.reduce((a, b) => a + b, 0);
-    aviosProx    = opsConAviosAll.reduce((a, g, i) => a + (pesos[i] / sumP) * (g.avios / g.prendas), 0);
-  }
-  const opsConMPAll = allGastosOps.filter(g => g.mp > 0 && g.prendas > 0);
-  let mpProx = 0;
-  if (opsConMPAll.length > 0) {
-    const pesos = opsConMPAll.map(g => 1 / (1 + Math.abs(g.prendas - qty)));
-    const sumP  = pesos.reduce((a, b) => a + b, 0);
-    mpProx      = opsConMPAll.reduce((a, g, i) => a + (pesos[i] / sumP) * (g.mp / g.prendas), 0);
-  }
-
   const rangos = {};
   for (const rango of allRangos) {
     const opsR = allHistOps.filter(([, d]) => d.prendas >= rango.min && d.prendas <= rango.max);
@@ -123,6 +106,17 @@ function buildCotizador(hist, gastosHist, qty, flatIndirectos) {
       if (wipsOPSet.has(w)) { tTotal += tPond; mTotal += mPond; }
     }
 
+    // MP/avíos: promedio ponderado por prendas dentro del rango
+    const gastosR    = opsR.map(([id]) => gastosHist[id]).filter(Boolean);
+    const opsConAvios = gastosR.filter(g => g.avios > 0 && g.prendas > 0);
+    const aviosPond  = opsConAvios.length > 0
+      ? opsConAvios.reduce((a, g) => a + g.avios, 0) / opsConAvios.reduce((a, g) => a + g.prendas, 0)
+      : 0;
+    const opsConMP   = gastosR.filter(g => g.mp > 0 && g.prendas > 0);
+    const mpPond     = opsConMP.length > 0
+      ? opsConMP.reduce((a, g) => a + g.mp, 0) / opsConMP.reduce((a, g) => a + g.prendas, 0)
+      : 0;
+
     rangos[rango.id] = {
       name: rango.name,
       ops: opsR.length,
@@ -134,11 +128,11 @@ function buildCotizador(hist, gastosHist, qty, flatIndirectos) {
         cif:   +flatIndirectos.cif.toFixed(4),
         ga:    +flatIndirectos.ga.toFixed(4),
         gv:    +flatIndirectos.gv.toFixed(4),
-        // MP/avíos: proximidad ponderada sobre todas las OPs — igual en todos los rangos
-        avios: +aviosProx.toFixed(4),
-        mp:    +mpProx.toFixed(4),
-        ops_con_avios: opsConAviosAll.length,
-        ops_con_mp:    opsConMPAll.length,
+        // MP/avíos: promedio ponderado por prendas dentro del rango
+        avios: +aviosPond.toFixed(4),
+        mp:    +mpPond.toFixed(4),
+        ops_con_avios: opsConAvios.length,
+        ops_con_mp:    opsConMP.length,
       },
       wips,
     };
