@@ -45,12 +45,14 @@ function getRangoId(qty) {
 }
 
 // ═══════════════════════════════════════════
-// buildCotizador — UNCHANGED from original
-// hist:       { opId: { prendas, wips: { wipId: { textil_total, manuf_total } } } }
-// gastosHist: { opId: { prendas, cif, ga, gv, avios, mp } }
+// buildCotizador
+// hist:          { opId: { prendas, wips: { wipId: { textil_total, manuf_total } } } }
+// gastosHist:    { opId: { prendas, cif, ga, gv, avios, mp } }  (avios/mp son TOTALES)
+// qty:           prendas de la OP nueva
+// flatIndirectos: { cif, ga, gv } — tasa flat TdV últimos 12 meses
 // ═══════════════════════════════════════════
 const WIP_UMBRAL_PCT = 10;
-function buildCotizador(hist, gastosHist, qty) {
+function buildCotizador(hist, gastosHist, qty, flatIndirectos) {
   const allHistOps = Object.entries(hist);
   if (allHistOps.length === 0) return null;
 
@@ -84,6 +86,23 @@ function buildCotizador(hist, gastosHist, qty) {
   }
   const wipsOPSet = new Set(wipsOP);
 
+  // ── MP/avíos: proximidad ponderada sobre TODAS las OPs históricas (sin filtro de rango)
+  const allGastosOps = Object.values(gastosHist);
+  const opsConAviosAll = allGastosOps.filter(g => g.avios > 0 && g.prendas > 0);
+  let aviosProx = 0;
+  if (opsConAviosAll.length > 0) {
+    const pesos  = opsConAviosAll.map(g => 1 / (1 + Math.abs(g.prendas - qty)));
+    const sumP   = pesos.reduce((a, b) => a + b, 0);
+    aviosProx    = opsConAviosAll.reduce((a, g, i) => a + (pesos[i] / sumP) * (g.avios / g.prendas), 0);
+  }
+  const opsConMPAll = allGastosOps.filter(g => g.mp > 0 && g.prendas > 0);
+  let mpProx = 0;
+  if (opsConMPAll.length > 0) {
+    const pesos = opsConMPAll.map(g => 1 / (1 + Math.abs(g.prendas - qty)));
+    const sumP  = pesos.reduce((a, b) => a + b, 0);
+    mpProx      = opsConMPAll.reduce((a, g, i) => a + (pesos[i] / sumP) * (g.mp / g.prendas), 0);
+  }
+
   const rangos = {};
   for (const rango of allRangos) {
     const opsR = allHistOps.filter(([, d]) => d.prendas >= rango.min && d.prendas <= rango.max);
@@ -104,24 +123,6 @@ function buildCotizador(hist, gastosHist, qty) {
       if (wipsOPSet.has(w)) { tTotal += tPond; mTotal += mPond; }
     }
 
-    const opIds = opsR.map(([id]) => id);
-    const gastosOps = opIds.map(id => gastosHist[id]).filter(Boolean);
-    let cif = 0, ga = 0, gv = 0;
-    if (gastosOps.length > 0) {
-      cif = gastosOps.reduce((a, g) => a + g.cif, 0) / gastosOps.length;
-      ga  = gastosOps.reduce((a, g) => a + g.ga,  0) / gastosOps.length;
-      gv  = gastosOps.reduce((a, g) => a + g.gv,  0) / gastosOps.length;
-    }
-
-    const opsConAvios = gastosOps.filter(g => g.avios > 0 && g.prendas > 0);
-    const aviosPond = opsConAvios.length > 0
-      ? opsConAvios.reduce((a, g) => a + g.avios, 0) / opsConAvios.reduce((a, g) => a + g.prendas, 0)
-      : 0;
-    const opsConMP = gastosOps.filter(g => g.mp > 0 && g.prendas > 0);
-    const mpPond = opsConMP.length > 0
-      ? opsConMP.reduce((a, g) => a + g.mp, 0) / opsConMP.reduce((a, g) => a + g.prendas, 0)
-      : 0;
-
     rangos[rango.id] = {
       name: rango.name,
       ops: opsR.length,
@@ -129,14 +130,15 @@ function buildCotizador(hist, gastosHist, qty) {
       manuf: +mTotal.toFixed(4),
       costo_base: +(tTotal + mTotal).toFixed(4),
       gastos: {
-        cif: +cif.toFixed(4),
-        ga: +ga.toFixed(4),
-        gv: +gv.toFixed(4),
-        avios: +aviosPond.toFixed(4),
-        mp: +mpPond.toFixed(4),
-        ops_con_gastos: gastosOps.length,
-        ops_con_avios: opsConAvios.length,
-        ops_con_mp: opsConMP.length,
+        // CIF/GA/GV: tasa flat TdV (últimos 12 meses) — igual en todos los rangos
+        cif:   +flatIndirectos.cif.toFixed(4),
+        ga:    +flatIndirectos.ga.toFixed(4),
+        gv:    +flatIndirectos.gv.toFixed(4),
+        // MP/avíos: proximidad ponderada sobre todas las OPs — igual en todos los rangos
+        avios: +aviosProx.toFixed(4),
+        mp:    +mpProx.toFixed(4),
+        ops_con_avios: opsConAviosAll.length,
+        ops_con_mp:    opsConMPAll.length,
       },
       wips,
     };
@@ -353,6 +355,40 @@ async function main() {
     console.log(`Completed WIPs: ${Object.keys(completedWips).length} OPs`);
   }
 
+  // ─── 4b. Flat indirects: tasa TdV últimos 12 meses ───
+  console.log("Calculating flat indirect rates (last 12 months)...");
+  t = Date.now();
+  const flatRow = (await client.query(`
+    WITH fecha_max AS (
+      SELECT MAX(fecha) AS max_fecha FROM silver.bd_margen WHERE factura IS NOT NULL
+    ),
+    ops_12m AS (
+      SELECT DISTINCT cod_ordpro::text AS op
+      FROM silver.bd_margen, fecha_max
+      WHERE factura IS NOT NULL
+        AND fecha >= fecha_max.max_fecha - interval '12 months'
+    ),
+    prendas_op AS (
+      SELECT cod_ordpro::text AS op, SUM(prendas_requeridas)::numeric AS prendas
+      FROM silver.bd_margen WHERE factura IS NOT NULL
+      GROUP BY cod_ordpro
+    )
+    SELECT
+      SUM(o.indirect_factory_cost) / NULLIF(SUM(p.prendas), 0) AS cif,
+      SUM(o.indirect_admin_cost)   / NULLIF(SUM(p.prendas), 0) AS ga,
+      SUM(o.indirect_sales_cost)   / NULLIF(SUM(p.prendas), 0) AS gv
+    FROM silver.mv_telric_ops o
+    JOIN ops_12m ON ops_12m.op = o.op::text
+    JOIN prendas_op p ON p.op = o.op::text
+    WHERE o.category = 'Facturada'
+  `)).rows[0];
+  const flatIndirectos = {
+    cif: Number(flatRow.cif),
+    ga:  Number(flatRow.ga),
+    gv:  Number(flatRow.gv),
+  };
+  console.log(`Flat indirectos: CIF=${flatIndirectos.cif.toFixed(4)} GA=${flatIndirectos.ga.toFixed(4)} GV=${flatIndirectos.gv.toFixed(4)} en ${Date.now() - t}ms`);
+
   // ─── 5. Calcular cotizador para cada OP ───
   console.log("Calculating...");
   const z0Out = z0.map(op => {
@@ -395,7 +431,7 @@ async function main() {
       return result;
     }
 
-    const cot = buildCotizador(hist, gastos, qty);
+    const cot = buildCotizador(hist, gastos, qty, flatIndirectos);
     if (!cot) { result.cotizador = null; return result; }
     cot.metodo = metodo;
 
