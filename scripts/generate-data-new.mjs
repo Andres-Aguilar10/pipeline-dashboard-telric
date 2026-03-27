@@ -360,13 +360,13 @@ async function main() {
   t = Date.now();
   const flatRow = (await client.query(`
     WITH fecha_max AS (
-      SELECT MAX(fecha) AS max_fecha FROM silver.bd_margen WHERE factura IS NOT NULL
+      SELECT MAX(TO_DATE(fecha, 'DD/MM/YYYY')) AS max_fecha FROM silver.bd_margen WHERE factura IS NOT NULL
     ),
     ops_12m AS (
       SELECT DISTINCT cod_ordpro::text AS op
       FROM silver.bd_margen, fecha_max
       WHERE factura IS NOT NULL
-        AND fecha >= fecha_max.max_fecha - interval '12 months'
+        AND TO_DATE(fecha, 'DD/MM/YYYY') >= fecha_max.max_fecha - interval '12 months'
     ),
     prendas_op AS (
       SELECT cod_ordpro::text AS op, SUM(prendas_requeridas)::numeric AS prendas
