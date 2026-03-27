@@ -106,15 +106,20 @@ function buildCotizador(hist, gastosHist, qty, flatIndirectos) {
       if (wipsOPSet.has(w)) { tTotal += tPond; mTotal += mPond; }
     }
 
-    // MP/avíos: promedio ponderado por prendas dentro del rango
-    const gastosR    = opsR.map(([id]) => gastosHist[id]).filter(Boolean);
+    // MP/avíos/prod_months: promedio ponderado por prendas dentro del rango
+    const gastosR     = opsR.map(([id]) => gastosHist[id]).filter(Boolean);
     const opsConAvios = gastosR.filter(g => g.avios > 0 && g.prendas > 0);
-    const aviosPond  = opsConAvios.length > 0
+    const aviosPond   = opsConAvios.length > 0
       ? opsConAvios.reduce((a, g) => a + g.avios, 0) / opsConAvios.reduce((a, g) => a + g.prendas, 0)
       : 0;
-    const opsConMP   = gastosR.filter(g => g.mp > 0 && g.prendas > 0);
-    const mpPond     = opsConMP.length > 0
+    const opsConMP    = gastosR.filter(g => g.mp > 0 && g.prendas > 0);
+    const mpPond      = opsConMP.length > 0
       ? opsConMP.reduce((a, g) => a + g.mp, 0) / opsConMP.reduce((a, g) => a + g.prendas, 0)
+      : 0;
+    // prod_months: promedio ponderado por prendas (para fórmula avíos futuro en IN)
+    const opsConPM    = gastosR.filter(g => g.prod_months > 0 && g.prendas > 0);
+    const prodMonthsPond = opsConPM.length > 0
+      ? opsConPM.reduce((a, g) => a + g.prod_months * g.prendas, 0) / opsConPM.reduce((a, g) => a + g.prendas, 0)
       : 0;
 
     rangos[rango.id] = {
@@ -129,8 +134,9 @@ function buildCotizador(hist, gastosHist, qty, flatIndirectos) {
         ga:    +flatIndirectos.ga.toFixed(4),
         gv:    +flatIndirectos.gv.toFixed(4),
         // MP/avíos: promedio ponderado por prendas dentro del rango
-        avios: +aviosPond.toFixed(4),
-        mp:    +mpPond.toFixed(4),
+        avios:       +aviosPond.toFixed(4),
+        mp:          +mpPond.toFixed(4),
+        prod_months: +prodMonthsPond.toFixed(2),
         ops_con_avios: opsConAvios.length,
         ops_con_mp:    opsConMP.length,
       },
@@ -206,7 +212,8 @@ async function main() {
       indirect_sales_cost,
       trim_cost,
       raw_material_cost,
-      fabric_cost
+      fabric_cost,
+      prod_months
     FROM silver.mv_telric_ops
     WHERE category = 'Facturada'
   `)).rows;
@@ -259,8 +266,9 @@ async function main() {
       ga:    Number(r.indirect_admin_cost)   / prendas,
       gv:    Number(r.indirect_sales_cost)   / prendas,
       // avios y mp son TOTALES → buildCotizador los divide por prendas (promedio ponderado)
-      avios: Number(r.trim_cost),
-      mp:    Number(r.raw_material_cost) + Number(r.fabric_cost),
+      avios:       Number(r.trim_cost),
+      mp:          Number(r.raw_material_cost) + Number(r.fabric_cost),
+      prod_months: Number(r.prod_months),
     };
   }
 
@@ -331,7 +339,7 @@ async function main() {
     console.log("Loading real materials for IN OPs...");
     t = Date.now();
     const rows = (await client.query(`
-      SELECT op::text, raw_material_cost, fabric_cost, trim_cost
+      SELECT op::text, raw_material_cost, fabric_cost, trim_cost, prod_months
       FROM silver.mv_telric_ops
       WHERE op::text = ANY($1)
     `, [inPrIds])).rows;
@@ -339,7 +347,7 @@ async function main() {
       const mp    = Number(r.raw_material_cost) + Number(r.fabric_cost);
       const avios = Number(r.trim_cost);
       if (mp > 0 || avios > 0) {
-        realMaterials[r.op] = { mp_total: mp, avios_total: avios };
+        realMaterials[r.op] = { mp_total: mp, avios_total: avios, prod_months: Number(r.prod_months) };
       }
     }
     console.log(`Real materials: ${Object.keys(realMaterials).length} OPs en ${Date.now() - t}ms`);
@@ -461,9 +469,25 @@ async function main() {
 
       const mat = realMaterials[opId];
       if (mat && qty > 0) {
+        const mp_prenda        = mat.mp_total    / qty;
+        const avios_hist_prenda = mat.avios_total / qty;
+
+        // Avío Futuro = MAX(0; C/U × (prod_months_similar - prod_months_in + 1) - avios_hist)
+        const rangoData        = cot.rangos[cot.rango_actual] || cot.rangos["promedio"];
+        const avios_similar    = rangoData?.gastos?.avios      ?? 0;
+        const prod_months_sim  = rangoData?.gastos?.prod_months ?? 0;
+        const prod_months_in   = mat.prod_months;
+        const cu               = prod_months_sim > 0 ? avios_similar / prod_months_sim : 0;
+        const avios_futuro     = Math.max(0, cu * (prod_months_sim - prod_months_in + 1) - avios_hist_prenda);
+        const avios_total      = avios_hist_prenda + avios_futuro;
+
         cot.real_materials = {
-          mp:    +(mat.mp_total    / qty).toFixed(4),
-          avios: +(mat.avios_total / qty).toFixed(4),
+          mp:           +mp_prenda.toFixed(4),
+          avios:        +avios_total.toFixed(4),
+          avios_hist:   +avios_hist_prenda.toFixed(4),
+          avios_futuro: +avios_futuro.toFixed(4),
+          prod_months_in:  prod_months_in,
+          prod_months_sim: +prod_months_sim.toFixed(2),
         };
       }
     }
