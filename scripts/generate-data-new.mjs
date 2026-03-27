@@ -465,8 +465,8 @@ async function main() {
     return result;
   });
 
-  // ─── 6. Escribir z0_new.json (no toca z0.json hasta validar) ───
-  fs.writeFileSync(path.join(outDir, "z0_new.json"), JSON.stringify(z0Out));
+  // ─── 6. Escribir z0.json ───
+  fs.writeFileSync(path.join(outDir, "z0.json"), JSON.stringify(z0Out));
   const conCotiz    = z0Out.filter(r => r.cotizador).length;
   const conRec      = z0Out.filter(r => r.cotizador?.metodo === "recurrente").length;
   const conNuevo    = z0Out.filter(r => r.cotizador?.metodo === "nuevo").length;
