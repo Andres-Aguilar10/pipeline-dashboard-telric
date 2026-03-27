@@ -168,22 +168,31 @@ async function main() {
   }
 
   // ─── 2. Prendas desde bd_margen (fuente canónica) — se carga PRIMERO ───
-  // Usadas para filtrar y calcular en todos los pasos siguientes
+  // También calcula la fecha máxima para ventana de 24 meses del histórico
   console.log("Loading prendas from bd_margen...");
   let t = Date.now();
   const bdMargenRows = (await client.query(`
-    SELECT cod_ordpro::text AS pr_id, SUM(prendas_requeridas)::numeric AS prendas
+    SELECT
+      cod_ordpro::text AS pr_id,
+      SUM(prendas_requeridas)::numeric AS prendas,
+      MAX(TO_DATE(fecha, 'DD/MM/YYYY')) AS ultima_fecha
     FROM silver.bd_margen
     WHERE factura IS NOT NULL
     GROUP BY cod_ordpro
   `)).rows;
   const bdMargenPrendas = {};
-  for (const r of bdMargenRows) bdMargenPrendas[r.pr_id] = Number(r.prendas);
-  console.log(`bd_margen prendas: ${bdMargenRows.length} OPs en ${Date.now() - t}ms`);
+  const bdMargenFecha   = {};
+  for (const r of bdMargenRows) {
+    bdMargenPrendas[r.pr_id] = Number(r.prendas);
+    bdMargenFecha[r.pr_id]   = r.ultima_fecha; // Date object
+  }
+
+  // Fecha de corte: últimos 24 meses desde MAX(fecha) en bd_margen
+  const fechaMax24 = new Date(Math.max(...Object.values(bdMargenFecha).map(d => new Date(d))));
+  fechaMax24.setMonth(fechaMax24.getMonth() - 24);
+  console.log(`bd_margen prendas: ${bdMargenRows.length} OPs | ventana histórico 24m desde ${fechaMax24.toISOString().slice(0,10)} en ${Date.now() - t}ms`);
 
   // ─── 3. Cargar TODOS los históricos de una vez (2 queries) ───
-  // Reemplaza: costo_wip_op + costo_op_detalle (múltiples queries en loop)
-  // Sin filtro pr_requested_q en SQL — el filtro >= 200 se aplica después con bd_margen prendas
   console.log("Loading mv_telric_ops (Facturadas)...");
   t = Date.now();
   const facOpsRows = (await client.query(`
@@ -201,9 +210,13 @@ async function main() {
     FROM silver.mv_telric_ops
     WHERE category = 'Facturada'
   `)).rows;
-  // Filtrar con bd_margen prendas (fuente canónica), no con pr_requested_q de Telric
-  const facOpsFiltered = facOpsRows.filter(r => (bdMargenPrendas[r.op] ?? 0) >= 200);
-  console.log(`mv_telric_ops: ${facOpsRows.length} rows → ${facOpsFiltered.length} con bd_margen >= 200 en ${Date.now() - t}ms`);
+  // Filtrar: prendas >= 200 Y facturada dentro de los últimos 24 meses
+  const facOpsFiltered = facOpsRows.filter(r => {
+    const prendas = bdMargenPrendas[r.op] ?? 0;
+    const fecha   = bdMargenFecha[r.op];
+    return prendas >= 200 && fecha && new Date(fecha) >= fechaMax24;
+  });
+  console.log(`mv_telric_ops: ${facOpsRows.length} rows → ${facOpsFiltered.length} con bd_margen >= 200 y 24m en ${Date.now() - t}ms`);
 
   console.log("Loading mv_telric_wip_dist (Facturadas)...");
   t = Date.now();
