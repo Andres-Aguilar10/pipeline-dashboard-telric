@@ -221,12 +221,6 @@ async function main() {
   const z1 = (await client.query("SELECT * FROM silver.z1_reporte")).rows;
   console.log(`z1: ${z1.length}`);
 
-  const z1ByOrder = {};
-  for (const r of z1) {
-    if (!z1ByOrder[r.order_id]) z1ByOrder[r.order_id] = new Set();
-    z1ByOrder[r.order_id].add(r.process_id);
-  }
-
   // ─── 2. Prendas desde bd_margen (fuente canónica) — se carga PRIMERO ───
   // También calcula la fecha máxima para ventana de 24 meses del histórico
   console.log("Loading prendas from bd_margen...");
@@ -294,18 +288,20 @@ async function main() {
   // ─── 3. Construir índices en memoria ───
 
   // wipsByOp: opId → { wipId: { textil_total, manuf_total } }
-  // allocated_cost se clasifica en textil o manufactura según wip_id
+  // Solo OPs que pasaron el filtro 24m + prendas >= 200
+  const facOpsSet = new Set(facOpsFiltered.map(r => r.op));
   const wipsByOp = {};
   for (const r of facWipRows) {
-    const opId  = r.op;
+    if (!facOpsSet.has(r.op)) continue; // skip OPs fuera de ventana 24m
     const wipId = r.wip_id.trim();
     const cost  = Number(r.allocated_cost);
-    if (!wipsByOp[opId]) wipsByOp[opId] = {};
-    wipsByOp[opId][wipId] = {
+    if (!wipsByOp[r.op]) wipsByOp[r.op] = {};
+    wipsByOp[r.op][wipId] = {
       textil_total: TEXTIL_WIPS.has(wipId) ? cost : 0,
       manuf_total:  MANUF_WIPS.has(wipId)  ? cost : 0,
     };
   }
+  console.log(`wipsByOp: ${Object.keys(wipsByOp).length} OPs (filtrado 24m)`);
 
   // gastosByOp: opId → { prendas, cif, ga, gv, avios, mp }
   // prendas siempre de bd_margen (fuente canónica); facOpsFiltered ya garantiza que existen en bd_margen
@@ -557,7 +553,7 @@ async function main() {
   const conNuevo    = z0Out.filter(r => r.cotizador?.metodo === "nuevo").length;
   const conTipo     = z0Out.filter(r => r.cotizador?.metodo === "nuevo_tipo").length;
   const sinCotiz    = z0Out.filter(r => !r.cotizador).length;
-  console.log(`z0_new: ${z0Out.length} → con cotizador: ${conCotiz} (rec=${conRec}, nuevo=${conNuevo}, nuevo_tipo=${conTipo}) | sin cotizador: ${sinCotiz}`);
+  console.log(`z0: ${z0Out.length} → con cotizador: ${conCotiz} (rec=${conRec}, nuevo=${conNuevo}, nuevo_tipo=${conTipo}) | sin cotizador: ${sinCotiz}`);
 
   // z1 no cambia
   fs.writeFileSync(path.join(outDir, "z1.json"), JSON.stringify(z1));
