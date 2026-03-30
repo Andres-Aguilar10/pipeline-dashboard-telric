@@ -51,6 +51,18 @@ function getRangoId(qty) {
 // qty:           prendas de la OP nueva
 // flatIndirectos: { cif, ga, gv } — tasa flat TdV últimos 12 meses
 // ═══════════════════════════════════════════
+// ── IQR filter: devuelve solo valores dentro de [Q1-1.5×IQR, Q3+1.5×IQR]
+function filterIQR(values) {
+  if (values.length < 4) return values; // muy pocos datos, no filtrar
+  const sorted = [...values].sort((a, b) => a - b);
+  const q1 = sorted[Math.floor(sorted.length * 0.25)];
+  const q3 = sorted[Math.floor(sorted.length * 0.75)];
+  const iqr = q3 - q1;
+  const lo = q1 - 1.5 * iqr;
+  const hi = q3 + 1.5 * iqr;
+  return values.filter(v => v >= lo && v <= hi);
+}
+
 const WIP_UMBRAL_PCT = 10;
 function buildCotizador(hist, gastosHist, qty, flatIndirectos) {
   const allHistOps = Object.entries(hist);
@@ -91,36 +103,78 @@ function buildCotizador(hist, gastosHist, qty, flatIndirectos) {
     const opsR = allHistOps.filter(([, d]) => d.prendas >= rango.min && d.prendas <= rango.max);
     if (opsR.length === 0) { rangos[rango.id] = null; continue; }
 
+    // ── WIPs: IQR + proximidad por prendas dentro del rango ──
     const wips = {};
     let tTotal = 0, mTotal = 0;
 
     for (const w of allHistWips) {
       const opsConWip = opsR.filter(([, d]) => d.wips[w]);
       if (opsConWip.length === 0) continue;
-      const sumTextil  = opsConWip.reduce((a, [, d]) => a + d.wips[w].textil_total, 0);
-      const sumManuf   = opsConWip.reduce((a, [, d]) => a + d.wips[w].manuf_total, 0);
-      const sumPrendas = opsConWip.reduce((a, [, d]) => a + d.prendas, 0);
-      const tPond = sumPrendas > 0 ? sumTextil / sumPrendas : 0;
-      const mPond = sumPrendas > 0 ? sumManuf  / sumPrendas : 0;
-      wips[w] = { textil: +tPond.toFixed(4), manuf: +mPond.toFixed(4), ops: opsConWip.length, prendas: sumPrendas };
+
+      // Costo por prenda de cada OP para este WIP
+      const wipData = opsConWip.map(([, d]) => ({
+        prendas: d.prendas,
+        costoPrenda: (d.wips[w].textil_total + d.wips[w].manuf_total) / d.prendas,
+        textil_total: d.wips[w].textil_total,
+        manuf_total:  d.wips[w].manuf_total,
+      }));
+
+      // IQR: filtrar outliers por costo/prenda
+      const costos = wipData.map(d => d.costoPrenda);
+      const costosLimpios = filterIQR(costos);
+      const costosSet = new Set(costosLimpios);
+      const wipLimpio = wipData.filter(d => costosSet.has(d.costoPrenda));
+      const wipFinal = wipLimpio.length > 0 ? wipLimpio : wipData; // fallback si IQR elimina todo
+
+      // Proximidad: peso = 1/(1+|prendas_hist - qty|)
+      const pesos = wipFinal.map(d => 1 / (1 + Math.abs(d.prendas - qty)));
+      const sumP  = pesos.reduce((a, b) => a + b, 0);
+      const tPond = wipFinal.reduce((a, d, i) => a + (pesos[i] / sumP) * (d.textil_total / d.prendas), 0);
+      const mPond = wipFinal.reduce((a, d, i) => a + (pesos[i] / sumP) * (d.manuf_total  / d.prendas), 0);
+
+      wips[w] = { textil: +tPond.toFixed(4), manuf: +mPond.toFixed(4), ops: wipFinal.length, prendas: wipFinal.reduce((a, d) => a + d.prendas, 0) };
       if (wipsOPSet.has(w)) { tTotal += tPond; mTotal += mPond; }
     }
 
-    // MP/avíos/prod_months: promedio ponderado por prendas dentro del rango
-    const gastosR     = opsR.map(([id]) => gastosHist[id]).filter(Boolean);
-    const opsConAvios = gastosR.filter(g => g.avios > 0 && g.prendas > 0);
-    const aviosPond   = opsConAvios.length > 0
-      ? opsConAvios.reduce((a, g) => a + g.avios, 0) / opsConAvios.reduce((a, g) => a + g.prendas, 0)
-      : 0;
-    const opsConMP    = gastosR.filter(g => g.mp > 0 && g.prendas > 0);
-    const mpPond      = opsConMP.length > 0
-      ? opsConMP.reduce((a, g) => a + g.mp, 0) / opsConMP.reduce((a, g) => a + g.prendas, 0)
-      : 0;
-    // prod_months: promedio ponderado por prendas (para fórmula avíos futuro en IN)
-    const opsConPM    = gastosR.filter(g => g.prod_months > 0 && g.prendas > 0);
-    const prodMonthsPond = opsConPM.length > 0
-      ? opsConPM.reduce((a, g) => a + g.prod_months * g.prendas, 0) / opsConPM.reduce((a, g) => a + g.prendas, 0)
-      : 0;
+    // ── MP/avíos: IQR + proximidad por prendas dentro del rango ──
+    const gastosR = opsR.map(([id]) => gastosHist[id]).filter(Boolean);
+
+    // Avíos: IQR sobre avíos/prenda, luego proximidad
+    const opsConAviosRaw = gastosR.filter(g => g.avios > 0 && g.prendas > 0);
+    const aviosPP = opsConAviosRaw.map(g => g.avios / g.prendas);
+    const aviosLimpios = filterIQR(aviosPP);
+    const aviosSet = new Set(aviosLimpios);
+    const opsConAvios = opsConAviosRaw.filter(g => aviosSet.has(g.avios / g.prendas));
+    const opsAviosFinal = opsConAvios.length > 0 ? opsConAvios : opsConAviosRaw;
+    let aviosPond = 0;
+    if (opsAviosFinal.length > 0) {
+      const pesos = opsAviosFinal.map(g => 1 / (1 + Math.abs(g.prendas - qty)));
+      const sumP  = pesos.reduce((a, b) => a + b, 0);
+      aviosPond   = opsAviosFinal.reduce((a, g, i) => a + (pesos[i] / sumP) * (g.avios / g.prendas), 0);
+    }
+
+    // MP: IQR sobre mp/prenda, luego proximidad
+    const opsConMPRaw = gastosR.filter(g => g.mp > 0 && g.prendas > 0);
+    const mpPP = opsConMPRaw.map(g => g.mp / g.prendas);
+    const mpLimpios = filterIQR(mpPP);
+    const mpSet = new Set(mpLimpios);
+    const opsConMP = opsConMPRaw.filter(g => mpSet.has(g.mp / g.prendas));
+    const opsMPFinal = opsConMP.length > 0 ? opsConMP : opsConMPRaw;
+    let mpPond = 0;
+    if (opsMPFinal.length > 0) {
+      const pesos = opsMPFinal.map(g => 1 / (1 + Math.abs(g.prendas - qty)));
+      const sumP  = pesos.reduce((a, b) => a + b, 0);
+      mpPond      = opsMPFinal.reduce((a, g, i) => a + (pesos[i] / sumP) * (g.mp / g.prendas), 0);
+    }
+
+    // prod_months: proximidad ponderada (para fórmula avíos futuro en IN)
+    const opsConPM = gastosR.filter(g => g.prod_months > 0 && g.prendas > 0);
+    let prodMonthsPond = 0;
+    if (opsConPM.length > 0) {
+      const pesos = opsConPM.map(g => 1 / (1 + Math.abs(g.prendas - qty)));
+      const sumP  = pesos.reduce((a, b) => a + b, 0);
+      prodMonthsPond = opsConPM.reduce((a, g, i) => a + (pesos[i] / sumP) * g.prod_months, 0);
+    }
 
     rangos[rango.id] = {
       name: rango.name,
@@ -133,12 +187,12 @@ function buildCotizador(hist, gastosHist, qty, flatIndirectos) {
         cif:   +flatIndirectos.cif.toFixed(4),
         ga:    +flatIndirectos.ga.toFixed(4),
         gv:    +flatIndirectos.gv.toFixed(4),
-        // MP/avíos: promedio ponderado por prendas dentro del rango
+        // MP/avíos: IQR + proximidad por prendas dentro del rango
         avios:       +aviosPond.toFixed(4),
         mp:          +mpPond.toFixed(4),
         prod_months: +prodMonthsPond.toFixed(2),
-        ops_con_avios: opsConAvios.length,
-        ops_con_mp:    opsConMP.length,
+        ops_con_avios: opsAviosFinal.length,
+        ops_con_mp:    opsMPFinal.length,
       },
       wips,
     };
