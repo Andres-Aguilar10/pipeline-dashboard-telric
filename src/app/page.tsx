@@ -645,12 +645,12 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
       <p className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Analisis de Rentabilidad</p>
 
       {/* Row 1: Rentabilidad por cliente + Scatter */}
-      {analytics.conPrecio > 0 && (
         <div className="grid grid-cols-2 gap-4 mb-4">
           {/* Rentabilidad neta por cliente */}
           <div className={`${cardBase} bg-white border-gray-100`}>
             <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Rentabilidad neta por cliente</p>
             <p className="text-[11px] text-gray-400 mb-3 mt-0.5"><span className="text-emerald-600 font-medium">Verde = neto positivo</span> &middot; <span className="text-red-500 font-medium">Rojo = perdida neta</span></p>
+            {analytics.conPrecio === 0 ? <div className="h-[240px] flex items-center justify-center text-[11px] text-gray-300">Sin datos de precio para este filtro</div> :
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={analytics.rentByCliente} layout="vertical" barSize={14} margin={{ top: 0, right: 64, left: 8, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
@@ -671,7 +671,7 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
                   ))}
                 </Bar>
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer>}
           </div>
           {/* Scatter Precio vs Costo */}
           <div className={`${cardBase} bg-white border-gray-100`}>
@@ -685,6 +685,7 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
                 {analytics.scatterIN.length > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> IN ({analytics.scatterIN.length})</span>}
               </div>
             </div>
+            {analytics.conPrecio === 0 ? <div className="h-[240px] flex items-center justify-center text-[11px] text-gray-300">Sin datos de precio para este filtro</div> :
             <ResponsiveContainer width="100%" height={240}>
               <ScatterChart margin={{ top: 10, right: 20, bottom: 24, left: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -705,10 +706,9 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
                   <Scatter name="PO/Otros" data={analytics.scatterOther} fill="#94a3b844" stroke="#94a3b8" strokeWidth={1} cursor="pointer" onClick={(d: any) => handleScatterClick(d as ScatterPoint)} />
                 )}
               </ScatterChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer>}
           </div>
         </div>
-      )}
 
       {/* Row 2: Cobertura + OPs por cliente (bar) + Avance WIPs */}
       <div className="grid grid-cols-3 gap-4">
