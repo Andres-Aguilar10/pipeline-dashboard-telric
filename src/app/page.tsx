@@ -103,7 +103,7 @@ function getFactorMarca(cliente: string): number {
 const STATUS_COLORS: Record<string, { bg: string; ring: string; text: string }> = {
   NI: { bg: "bg-amber-500", ring: "ring-amber-300", text: "text-white" },
   IN: { bg: "bg-emerald-500", ring: "ring-emerald-300", text: "text-white" },
-  PO: { bg: "bg-[#991b1b]", ring: "ring-red-300", text: "text-white" },
+  PO: { bg: "bg-[#821417]", ring: "ring-red-300", text: "text-white" },
 };
 
 /* ───── Helpers ───── */
@@ -162,7 +162,7 @@ function Pagination({ page, totalPages, onPage }: { page: number; totalPages: nu
       {pages[0] > 1 && <span className="text-xs text-gray-400">...</span>}
       {pages.map((p) => (
         <button key={p} onClick={() => onPage(p)}
-          className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${p === page ? "bg-[#991b1b] text-white" : "hover:bg-gray-100 text-gray-600"}`}
+          className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${p === page ? "bg-[#821417] text-white" : "hover:bg-gray-100 text-gray-600"}`}
         >{p}</button>
       ))}
       {pages[pages.length - 1] < totalPages && <span className="text-xs text-gray-400">...</span>}
@@ -330,7 +330,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-50 text-white bg-[#1e293b]" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.15)" }}>
+      <header className="sticky top-0 z-50 text-white" style={{ background: "linear-gradient(135deg, #821417 0%, #a32428 60%, #bd4c42 100%)", boxShadow: "0 4px 24px rgba(130,20,23,0.25)" }}>
         <div className="max-w-[1700px] mx-auto px-6 py-3.5 flex items-center gap-4">
           <div className="w-10 h-10 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-[11px] font-black tracking-tight shrink-0">TDV</div>
           <div>
@@ -376,7 +376,7 @@ export default function Home() {
               gray: active ? "bg-slate-700 text-white" : "bg-white text-gray-500 hover:bg-gray-50",
               amber: active ? "bg-amber-600/80 text-white" : "bg-white text-amber-700 hover:bg-amber-50",
               emerald: active ? "bg-emerald-600/80 text-white" : "bg-white text-emerald-700 hover:bg-emerald-50",
-              red: active ? "bg-[#991b1b]/90 text-white" : "bg-white text-[#991b1b] hover:bg-red-50",
+              red: active ? "bg-[#821417]/90 text-white" : "bg-white text-[#821417] hover:bg-red-50",
             };
             return (
               <button key={tab.key} onClick={() => setStatusFilter(tab.key)}
@@ -433,12 +433,12 @@ export default function Home() {
         {/* Content */}
         {loading ? (
           <div className="flex items-center justify-center py-24">
-            <div className="animate-spin rounded-full h-8 w-8 border-[3px] border-[#991b1b] border-t-transparent" />
+            <div className="animate-spin rounded-full h-8 w-8 border-[3px] border-[#821417] border-t-transparent" />
             <span className="ml-3 text-gray-400 text-sm">Cargando...</span>
           </div>
         ) : error ? (
           <div className="bg-red-50 border border-red-100 rounded-xl p-8 text-center">
-            <p className="text-[#991b1b] font-semibold">Error al cargar datos</p>
+            <p className="text-[#821417] font-semibold">Error al cargar datos</p>
             <p className="text-sm text-gray-500 mt-1">{error}</p>
           </div>
         ) : (
@@ -508,7 +508,7 @@ export default function Home() {
 }
 
 /* ───── Analytics Section ───── */
-const MARCA_COLORS_A = ["#991b1b", "#10b981", "#f59e0b", "#3b82f6", "#8b5cf6", "#f472b6", "#14b8a6"];
+const MARCA_COLORS_A = ["#821417", "#10b981", "#f59e0b", "#3b82f6", "#8b5cf6", "#f472b6", "#14b8a6"];
 const AVANCE_COLORS_A = ["#e5e7eb", "#3b82f6", "#6366f1", "#8b5cf6", "#a855f7", "#10b981"];
 
 type ScatterPoint = { x: number; y: number; z: number; impacto: number; op: string; marca: string; qty: number; gap: number; status: string };
@@ -715,18 +715,18 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
         {/* Cobertura de cotizador por marca */}
         <div className={`${cardBase} bg-white border-gray-100`}>
           <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Cobertura de cotizador por marca</p>
-          <p className="text-[11px] text-gray-400 mb-3 mt-0.5"><span className="text-[#991b1b] font-medium">Total OPs</span> vs <span className="text-amber-500 font-medium">sin cotizador</span></p>
+          <p className="text-[11px] text-gray-400 mb-3 mt-0.5"><span className="text-[#821417] font-medium">Total OPs</span> vs <span className="text-amber-500 font-medium">sin cotizador</span></p>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={analytics.marcaBarData} barSize={10} margin={{ top: 0, right: 8, left: -16, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 9, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 9, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }} />
-              <Bar dataKey="total" name="Total OPs" fill="#991b1b" radius={[3, 3, 0, 0]}>
+              <Bar dataKey="total" name="Total OPs" fill="#821417" radius={[3, 3, 0, 0]}>
                 {analytics.marcaBarData.map((entry, i) => (
-                  <Cell key={i} fill="#991b1b"
+                  <Cell key={i} fill="#821417"
                     fillOpacity={selectedCtx ? (entry.name.replace("\u2026","").trim() === selectedCtx.marca.slice(0,10).trim() || selectedCtx.marca.startsWith(entry.name.replace("\u2026","")) ? 1 : 0.2) : 0.75}
-                    stroke={selectedCtx?.marca.startsWith(entry.name.replace("\u2026","")) ? "#991b1b" : "none"}
+                    stroke={selectedCtx?.marca.startsWith(entry.name.replace("\u2026","")) ? "#821417" : "none"}
                     strokeWidth={2}
                   />
                 ))}
@@ -777,7 +777,7 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
                 {analytics.avanceDist.map((entry, i) => (
                   <Cell key={i} fill={AVANCE_COLORS_A[i]}
                     fillOpacity={selectedCtx ? (entry.name === selectedCtx.bucket ? 1 : 0.2) : 1}
-                    stroke={selectedCtx?.bucket === entry.name ? "#991b1b" : "none"}
+                    stroke={selectedCtx?.bucket === entry.name ? "#821417" : "none"}
                     strokeWidth={2}
                   />
                 ))}
@@ -856,7 +856,7 @@ function getPrecioCotiz(cot: Cotizador | null | undefined, cliente: string): num
 }
 
 /* ───── Table styles ───── */
-const th = "px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-widest bg-slate-100 border-b border-gray-200 whitespace-nowrap sticky top-0";
+const th = "px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-widest bg-red-50/50 border-b border-gray-200 whitespace-nowrap sticky top-0";
 const td = "px-3 py-2.5 text-[13px] border-b border-gray-100 whitespace-nowrap";
 
 /* ───── Sortable Header ───── */
@@ -904,12 +904,12 @@ const Z0Table = memo(({ rows, selectedOrder, onSelect, sortCol, sortDir, onSort,
           <tr key={r.order_id} onClick={() => onSelect(r.order_id)}
             className={`cursor-pointer transition-colors ${sel ? "bg-red-50/60" : idx % 2 === 0 ? "hover:bg-gray-50/80 bg-white" : "hover:bg-gray-100/60 bg-gray-50/50"}`}>
             <td className={td}>
-              <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[11px] transition-colors ${sel ? "bg-[#991b1b] text-white" : "text-gray-400"}`}>
+              <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[11px] transition-colors ${sel ? "bg-[#821417] text-white" : "text-gray-400"}`}>
                 {sel ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg> : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>}
               </span>
             </td>
             <td className={td}><StatusBadge status={r.status} /></td>
-            <td className={`${td} font-mono text-xs font-bold text-[#991b1b]`}>{r.order_id}</td>
+            <td className={`${td} font-mono text-xs font-bold text-[#821417]`}>{r.order_id}</td>
             <td className={`${td} max-w-[180px] truncate`}>{r.po_customer_name?.trim()}</td>
             <td className={`${td} max-w-[140px] truncate`}>{r.pol_garment_class_description?.trim()}</td>
             <td className={`${td} font-mono text-xs`}>{r.pol_customer_style_id?.trim()}</td>
@@ -925,13 +925,13 @@ const Z0Table = memo(({ rows, selectedOrder, onSelect, sortCol, sortDir, onSort,
             <td className={`${td} text-right tabular-nums font-medium`}>{fmtNum(r.pol_requested_q)}</td>
             <td className={`${td} text-right tabular-nums`}>{fmtUSD(r.pol_amount_usd)}</td>
             <td className={`${td} text-right tabular-nums`}>
-              {(() => { const c = getCostoCotiz(r.cotizador); return c != null ? <span className="text-[#991b1b] font-medium">${c.toFixed(2)}</span> : <span className="text-gray-300">&mdash;</span>; })()}
+              {(() => { const c = getCostoCotiz(r.cotizador); return c != null ? <span className="text-[#821417] font-medium">${c.toFixed(2)}</span> : <span className="text-gray-300">&mdash;</span>; })()}
             </td>
             <td className={`${td} text-right tabular-nums`}>
               {(() => { const p = getPrecioCotiz(r.cotizador, r.po_customer_name); return p != null ? <span className="text-emerald-700 font-medium">${p.toFixed(2)}</span> : <span className="text-gray-300">&mdash;</span>; })()}
             </td>
             <td className={`${td} text-right tabular-nums`}>
-              {(() => { const c = getCostoCotiz(r.cotizador); const q = Number(r.pol_requested_q); return c != null ? <span className="text-[#991b1b] font-medium">{fmtUSD(c * q)}</span> : <span className="text-gray-300">&mdash;</span>; })()}
+              {(() => { const c = getCostoCotiz(r.cotizador); const q = Number(r.pol_requested_q); return c != null ? <span className="text-[#821417] font-medium">{fmtUSD(c * q)}</span> : <span className="text-gray-300">&mdash;</span>; })()}
             </td>
             <td className={`${td} ${isOverdue ? "text-red-500 font-medium" : "text-gray-500"}`}>{fmtDate(r.due_date)}{isOverdue ? " !" : ""}</td>
           </tr>
@@ -966,11 +966,11 @@ function DetailPanel({ orderId, z1, z2, z2Loading, opData }: { orderId: string; 
     <div className="mt-3 bg-white rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden animate-[fadeIn_0.2s_ease]">
       <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-bold text-[#991b1b]">OP {orderId}</span>
+          <span className="text-sm font-bold text-[#821417]">OP {orderId}</span>
           <div className="flex gap-0.5 bg-white rounded-lg p-0.5 border border-gray-200">
             {tabs.map(([k, lbl]) => (
               <button key={k} onClick={() => setDtab(k)}
-                className={`px-3 py-1 rounded-md text-[11px] font-medium transition-all ${dtab === k ? "bg-[#991b1b] text-white" : "text-gray-500 hover:bg-gray-50"}`}>{lbl}</button>
+                className={`px-3 py-1 rounded-md text-[11px] font-medium transition-all ${dtab === k ? "bg-[#821417] text-white" : "text-gray-500 hover:bg-gray-50"}`}>{lbl}</button>
             ))}
           </div>
         </div>
@@ -1008,7 +1008,7 @@ function DetailPanel({ orderId, z1, z2, z2Loading, opData }: { orderId: string; 
         ) : dtab === "mat" ? (
           z2Loading ? (
             <div className="flex items-center justify-center py-10">
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#991b1b] border-t-transparent" /><span className="ml-3 text-sm text-gray-400">Cargando...</span>
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#821417] border-t-transparent" /><span className="ml-3 text-sm text-gray-400">Cargando...</span>
             </div>
           ) : z2.length === 0 ? <Empty msg="Sin materiales" /> : (
             <table className="w-full">
@@ -1092,7 +1092,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
   };
 
   // Column highlight class
-  const colCls = (rid: string) => rid === rangoActual ? "bg-[#991b1b]/5" : "";
+  const colCls = (rid: string) => rid === rangoActual ? "bg-[#821417]/5" : "";
   const colClsGreen = (rid: string) => rid === rangoActual ? "bg-emerald-100/60" : "";
 
   return (
@@ -1144,8 +1144,8 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                 const isActual = rid === rangoActual;
                 return (
                   <th key={rid} className={`${th} text-right ${colCls(rid)}`}>
-                    <span className={isActual ? "text-[#991b1b] font-bold" : ""}>{r.name}</span>
-                    {isActual && <span className="ml-1 text-[9px] text-[#991b1b]">*</span>}
+                    <span className={isActual ? "text-[#821417] font-bold" : ""}>{r.name}</span>
+                    {isActual && <span className="ml-1 text-[9px] text-[#821417]">*</span>}
                     <div className="text-[11px] font-normal text-gray-400">{r.ops} OPs</div>
                   </th>
                 );
@@ -1158,7 +1158,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
               <td colSpan={5 + availRangos.length} className="px-3 py-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <span>WIPs de Proceso</span>
-                  <button onClick={() => setShowAllWips(v => !v)} className="text-[11px] font-medium text-[#991b1b] hover:underline">
+                  <button onClick={() => setShowAllWips(v => !v)} className="text-[11px] font-medium text-[#821417] hover:underline">
                     {showAllWips ? `Mostrar solo OP (${checkedCount})` : `Mostrar todos (${allWips.length})`}
                   </button>
                 </div>
@@ -1203,7 +1203,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                       <td key={rid} className={`${td} text-right tabular-nums ${colCls(rid)} ${isActual && checked ? "font-semibold" : ""}`}>
                         {!hasData ? <span className="text-gray-300">---</span>
                           : cost === 0 ? <span className="text-gray-300">$0.00</span>
-                          : <span className={isActual ? (isReal ? "text-emerald-700" : "text-[#991b1b]") : ""}>${cost.toFixed(2)}</span>}
+                          : <span className={isActual ? (isReal ? "text-emerald-700" : "text-[#821417]") : ""}>${cost.toFixed(2)}</span>}
                       </td>
                     );
                   })}
@@ -1235,7 +1235,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                 }
                 return (
                   <td key={rid} className={`${td} text-right tabular-nums ${colCls(rid)}`}>
-                    <span className={isActual ? "text-[#991b1b] font-bold" : ""}>${subtotal.toFixed(2)}</span>
+                    <span className={isActual ? "text-[#821417] font-bold" : ""}>${subtotal.toFixed(2)}</span>
                   </td>
                 );
               })}
@@ -1273,7 +1273,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                     return (
                       <td key={rid} className={`${td} text-right tabular-nums ${colCls(rid)}`}>
                         {val > 0
-                          ? <span className={isActual ? (isRealMat ? "text-emerald-700 font-semibold" : "text-[#991b1b] font-semibold") : ""}>${val.toFixed(2)}</span>
+                          ? <span className={isActual ? (isRealMat ? "text-emerald-700 font-semibold" : "text-[#821417] font-semibold") : ""}>${val.toFixed(2)}</span>
                           : <span className="text-gray-300">---</span>}
                       </td>
                     );
@@ -1297,7 +1297,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                 const val = realMp + realAvios;
                 return (
                   <td key={rid} className={`${td} text-right tabular-nums ${colCls(rid)}`}>
-                    <span className={isActual ? "text-[#991b1b] font-bold" : ""}>{val > 0 ? `$${val.toFixed(2)}` : "---"}</span>
+                    <span className={isActual ? "text-[#821417] font-bold" : ""}>{val > 0 ? `$${val.toFixed(2)}` : "---"}</span>
                   </td>
                 );
               })}
@@ -1330,7 +1330,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                   const val = r.gastos?.[row.key] ?? 0;
                   return (
                     <td key={rid} className={`${td} text-right tabular-nums ${colCls(rid)}`}>
-                      {val > 0 ? <span className={isActual ? "text-[#991b1b] font-semibold" : ""}>${val.toFixed(2)}</span> : <span className="text-gray-300">---</span>}
+                      {val > 0 ? <span className={isActual ? "text-[#821417] font-semibold" : ""}>${val.toFixed(2)}</span> : <span className="text-gray-300">---</span>}
                     </td>
                   );
                 })}
@@ -1350,7 +1350,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                 const val = (r.gastos?.cif ?? 0) + (r.gastos?.ga ?? 0) + (r.gastos?.gv ?? 0);
                 return (
                   <td key={rid} className={`${td} text-right tabular-nums ${colCls(rid)}`}>
-                    <span className={isActual ? "text-[#991b1b] font-bold" : ""}>{val > 0 ? `$${val.toFixed(2)}` : "---"}</span>
+                    <span className={isActual ? "text-[#821417] font-bold" : ""}>{val > 0 ? `$${val.toFixed(2)}` : "---"}</span>
                   </td>
                 );
               })}
@@ -1369,7 +1369,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                 const t = getTotal(r);
                 return (
                   <td key={rid} className={`${td} text-right tabular-nums ${colCls(rid)}`}>
-                    <span className={`font-bold ${isActual ? "text-[#991b1b]" : ""}`}>${t.toFixed(2)}</span>
+                    <span className={`font-bold ${isActual ? "text-[#821417]" : ""}`}>${t.toFixed(2)}</span>
                   </td>
                 );
               })}
