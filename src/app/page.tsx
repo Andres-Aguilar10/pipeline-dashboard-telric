@@ -245,6 +245,7 @@ export default function Home() {
       let va: any = (a as any)[col], vb: any = (b as any)[col];
       if (col === "costo_cotiz") { va = getCostoCotiz(a.cotizador) ?? -1; vb = getCostoCotiz(b.cotizador) ?? -1; }
       if (col === "precio_cotiz") { va = getPrecioCotiz(a.cotizador, a.po_customer_name) ?? -1; vb = getPrecioCotiz(b.cotizador, b.po_customer_name) ?? -1; }
+      if (col === "costo_total") { const ca = getCostoCotiz(a.cotizador); const cb = getCostoCotiz(b.cotizador); va = ca != null ? ca * Number(a.pol_requested_q) : -1; vb = cb != null ? cb * Number(b.pol_requested_q) : -1; }
       if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
       return String(va ?? "").localeCompare(String(vb ?? ""), "es", { numeric: true }) * dir;
     });
@@ -319,7 +320,7 @@ export default function Home() {
           const cards = [
             { label: "Órdenes Activas", value: fmtNum(summary.total), sub: `${fmtNum(summary.conCotiz)} con cotizador`, borderLeft: "border-l-4 border-l-blue-400" },
             { label: "Prendas Totales", value: fmtNum(summary.totalQty), sub: `${fmtNum(summary.avgQty)} prom. por OP`, borderLeft: "border-l-4 border-l-indigo-400" },
-            { label: "Monto Cliente (USD)", value: fmtUSD(summary.totalUSD), sub: summary.totalUSD > 0 ? `$${(summary.totalUSD / summary.total).toFixed(0)} prom. por OP` : "", borderLeft: "border-l-4 border-l-emerald-400" },
+            { label: "Monto USD (Precio × Cant.)", value: fmtUSD(summary.totalUSD), sub: summary.totalUSD > 0 ? `$${(summary.totalUSD / summary.total).toFixed(0)} prom. por OP` : "", borderLeft: "border-l-4 border-l-emerald-400" },
             { label: "Sin Cotizador", value: fmtNum(summary.sinCotiz), sub: summary.total > 0 ? `${(summary.sinCotiz / summary.total * 100).toFixed(0)}% sin costo estimado` : "", borderLeft: "border-l-4 border-l-amber-400" },
             { label: "Due Date Vencido", value: fmtNum(summary.vencidas), sub: summary.total > 0 ? `${(summary.vencidas / summary.total * 100).toFixed(0)}% fuera de plazo` : "", borderLeft: "border-l-4 border-l-red-400" },
           ];
@@ -701,12 +702,12 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
               <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Precio vs Costo — NI / IN</p>
+                    <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Precio vs Costo{analytics.scatterNI.length > 0 && analytics.scatterIN.length > 0 ? " — NI / IN" : analytics.scatterNI.length > 0 ? " — NI" : analytics.scatterIN.length > 0 ? " — IN" : ""}</p>
                     <p className="text-[10px] text-gray-400 mt-0.5">Sobre diagonal = pérdida · tamaño = impacto total · <span className="text-[#821417] font-medium">Clic → cotizador</span></p>
                   </div>
                   <div className="flex gap-2 text-[10px] text-gray-500 shrink-0">
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> NI ({analytics.scatterNI.length})</span>
-                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> IN ({analytics.scatterIN.length})</span>
+                    {analytics.scatterNI.length > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> NI ({analytics.scatterNI.length})</span>}
+                    {analytics.scatterIN.length > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> IN ({analytics.scatterIN.length})</span>}
                   </div>
                 </div>
                 <ResponsiveContainer width="100%" height={240}>
@@ -722,9 +723,9 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
                       <Scatter name="_diag" data={analytics.diagLine} line={{ stroke: "#94a3b8", strokeDasharray: "5 3", strokeWidth: 1.5 } as any} shape={() => <g />} legendType="none" fill="transparent" />
                     )}
                     {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    <Scatter name="NI" data={analytics.scatterNI} fill="#f59e0b44" stroke="#f59e0b" strokeWidth={1.5} cursor="pointer" onClick={(d: any) => handleScatterClick(d as ScatterPoint)} />
+                    {analytics.scatterNI.length > 0 && <Scatter name="NI" data={analytics.scatterNI} fill="#f59e0b44" stroke="#f59e0b" strokeWidth={1.5} cursor="pointer" onClick={(d: any) => handleScatterClick(d as ScatterPoint)} />}
                     {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    <Scatter name="IN" data={analytics.scatterIN} fill="#10b98144" stroke="#10b981" strokeWidth={1.5} cursor="pointer" onClick={(d: any) => handleScatterClick(d as ScatterPoint)} />
+                    {analytics.scatterIN.length > 0 && <Scatter name="IN" data={analytics.scatterIN} fill="#10b98144" stroke="#10b981" strokeWidth={1.5} cursor="pointer" onClick={(d: any) => handleScatterClick(d as ScatterPoint)} />}
                     {analytics.scatterOther.length > 0 && (
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       <Scatter name="PO/Otros" data={analytics.scatterOther} fill="#94a3b844" stroke="#94a3b8" strokeWidth={1} cursor="pointer" onClick={(d: any) => handleScatterClick(d as ScatterPoint)} />
@@ -738,63 +739,59 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
             </div>
           )}
 
-          {/* Alertas accionables */}
+          {/* Alertas accionables — solo muestra paneles que tengan datos */}
           {analytics.conPrecio > 0 && (analytics.alertasIN.length > 0 || analytics.alertasNI.length > 0) && (
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              {/* IN urgente */}
+            <div className={`grid gap-4 mb-4 ${analytics.alertasIN.length > 0 && analytics.alertasNI.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
+              {/* IN urgente — solo si hay alertas IN */}
+              {analytics.alertasIN.length > 0 && (
               <div className="bg-red-50/40 rounded-xl border border-red-100/70 p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block" />
                   <p className="text-[11px] font-bold text-red-700 uppercase tracking-wider">IN · En producción con pérdida</p>
                   <span className="ml-auto text-[10px] text-red-400 font-medium">{analytics.alertasIN.length} OPs</span>
                 </div>
-                {analytics.alertasIN.length === 0 ? (
-                  <p className="text-[11px] text-gray-400 text-center py-3">Sin alertas activas</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {analytics.alertasIN.map(a => (
-                      <button key={a.op} onClick={() => handleScatterClick(a)}
-                        className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg bg-white border transition-colors text-[11px] ${chartSelected?.op === a.op ? "border-red-400 shadow-sm" : "border-red-100 hover:border-red-300"}`}>
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-gray-800">OP {a.op}</span>
-                          <span className="text-gray-400 text-[10px]">{a.marca.length > 18 ? a.marca.slice(0, 18) + "…" : a.marca}</span>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <span className="font-bold text-red-600 block">${Math.abs(a.impacto).toLocaleString()}</span>
-                          <span className="text-gray-400 text-[10px]">{a.qty.toLocaleString()} pda</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className="space-y-1.5">
+                  {analytics.alertasIN.map(a => (
+                    <button key={a.op} onClick={() => handleScatterClick(a)}
+                      className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg bg-white border transition-colors text-[11px] ${chartSelected?.op === a.op ? "border-red-400 shadow-sm" : "border-red-100 hover:border-red-300"}`}>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-gray-800">OP {a.op}</span>
+                        <span className="text-gray-400 text-[10px]">{a.marca.length > 18 ? a.marca.slice(0, 18) + "…" : a.marca}</span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="font-bold text-red-600 block">${Math.abs(a.impacto).toLocaleString()}</span>
+                        <span className="text-gray-400 text-[10px]">{a.qty.toLocaleString()} pda</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
-              {/* NI negociable */}
+              )}
+              {/* NI negociable — solo si hay alertas NI */}
+              {analytics.alertasNI.length > 0 && (
               <div className="bg-amber-50/40 rounded-xl border border-amber-100/70 p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
                   <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">NI · Antes de producción — negociable</p>
                   <span className="ml-auto text-[10px] text-amber-500 font-medium">{analytics.alertasNI.length} OPs</span>
                 </div>
-                {analytics.alertasNI.length === 0 ? (
-                  <p className="text-[11px] text-gray-400 text-center py-3">Sin alertas</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {analytics.alertasNI.map(a => (
-                      <button key={a.op} onClick={() => handleScatterClick(a)}
-                        className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg bg-white border transition-colors text-[11px] ${chartSelected?.op === a.op ? "border-amber-400 shadow-sm" : "border-amber-100 hover:border-amber-300"}`}>
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-gray-800">OP {a.op}</span>
-                          <span className="text-gray-400 text-[10px]">{a.marca.length > 18 ? a.marca.slice(0, 18) + "…" : a.marca}</span>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <span className="font-bold text-amber-600 block">${Math.abs(a.impacto).toLocaleString()}</span>
-                          <span className="text-gray-400 text-[10px]">{a.qty.toLocaleString()} pda</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className="space-y-1.5">
+                  {analytics.alertasNI.map(a => (
+                    <button key={a.op} onClick={() => handleScatterClick(a)}
+                      className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg bg-white border transition-colors text-[11px] ${chartSelected?.op === a.op ? "border-amber-400 shadow-sm" : "border-amber-100 hover:border-amber-300"}`}>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-gray-800">OP {a.op}</span>
+                        <span className="text-gray-400 text-[10px]">{a.marca.length > 18 ? a.marca.slice(0, 18) + "…" : a.marca}</span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="font-bold text-amber-600 block">${Math.abs(a.impacto).toLocaleString()}</span>
+                        <span className="text-gray-400 text-[10px]">{a.qty.toLocaleString()} pda</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
+              )}
             </div>
           )}
 
@@ -978,9 +975,10 @@ const Z0Table = memo(({ rows, selectedOrder, onSelect, sortCol, sortDir, onSort,
       <th className={th}>WIP Actual</th>
       <SortTh col="pol_unit_price" label="Precio" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
       <SortTh col="pol_requested_q" label="Cant." sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
-      <SortTh col="pol_amount_usd" label="USD" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
+      <SortTh col="pol_amount_usd" label="Monto USD" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
       <SortTh col="costo_cotiz" label="Costo Cotiz." sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
       <SortTh col="precio_cotiz" label="Precio Cotiz." sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
+      <SortTh col="costo_total" label="Costo Total" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
       <SortTh col="due_date" label="Due Date" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
       <th className={th}>Publicacion</th><th className={th}>Embarque</th>
       <th className={th}>Destino</th><th className={th}>Temp.</th>
@@ -1021,6 +1019,9 @@ const Z0Table = memo(({ rows, selectedOrder, onSelect, sortCol, sortDir, onSort,
             </td>
             <td className={`${td} text-right tabular-nums`}>
               {(() => { const p = getPrecioCotiz(r.cotizador, r.po_customer_name); return p != null ? <span className="text-emerald-700 font-medium">${p.toFixed(2)}</span> : <span className="text-gray-300">—</span>; })()}
+            </td>
+            <td className={`${td} text-right tabular-nums`}>
+              {(() => { const c = getCostoCotiz(r.cotizador); const q = Number(r.pol_requested_q); return c != null ? <span className="text-[#821417] font-medium">{fmtUSD(c * q)}</span> : <span className="text-gray-300">—</span>; })()}
             </td>
             <td className={`${td} ${isOverdue ? "text-red-500 font-medium" : "text-gray-500"}`}>{fmtDate(r.due_date)}{isOverdue ? " !" : ""}</td>
             <td className={`${td} text-gray-400`}>{fmtDate(r.po_published_t)}</td>
