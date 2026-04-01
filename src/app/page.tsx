@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, ScatterChart, Scatter, ZAxis,
+  Cell, ScatterChart, Scatter, ZAxis,
   CartesianGrid,
 } from "recharts";
 
@@ -103,7 +103,7 @@ function getFactorMarca(cliente: string): number {
 const STATUS_COLORS: Record<string, { bg: string; ring: string; text: string }> = {
   NI: { bg: "bg-amber-500", ring: "ring-amber-300", text: "text-white" },
   IN: { bg: "bg-emerald-500", ring: "ring-emerald-300", text: "text-white" },
-  PO: { bg: "bg-[#821417]", ring: "ring-red-300", text: "text-white" },
+  PO: { bg: "bg-[#991b1b]", ring: "ring-red-300", text: "text-white" },
 };
 
 /* ───── Helpers ───── */
@@ -157,17 +157,17 @@ function Pagination({ page, totalPages, onPage }: { page: number; totalPages: nu
   for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, page + 2); i++) pages.push(i);
   return (
     <div className="flex items-center gap-1 justify-center py-3">
-      <button onClick={() => onPage(1)} disabled={page === 1} className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30">«</button>
-      <button onClick={() => onPage(page - 1)} disabled={page === 1} className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30">‹</button>
+      <button onClick={() => onPage(1)} disabled={page === 1} className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30">&laquo;</button>
+      <button onClick={() => onPage(page - 1)} disabled={page === 1} className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30">&lsaquo;</button>
       {pages[0] > 1 && <span className="text-xs text-gray-400">...</span>}
       {pages.map((p) => (
         <button key={p} onClick={() => onPage(p)}
-          className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${p === page ? "bg-[#821417] text-white" : "hover:bg-gray-100 text-gray-600"}`}
+          className={`px-2.5 py-1 text-xs rounded font-medium transition-colors ${p === page ? "bg-[#991b1b] text-white" : "hover:bg-gray-100 text-gray-600"}`}
         >{p}</button>
       ))}
       {pages[pages.length - 1] < totalPages && <span className="text-xs text-gray-400">...</span>}
-      <button onClick={() => onPage(page + 1)} disabled={page === totalPages} className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30">›</button>
-      <button onClick={() => onPage(totalPages)} disabled={page === totalPages} className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30">»</button>
+      <button onClick={() => onPage(page + 1)} disabled={page === totalPages} className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30">&rsaquo;</button>
+      <button onClick={() => onPage(totalPages)} disabled={page === totalPages} className="px-2 py-1 text-xs rounded hover:bg-gray-100 disabled:opacity-30">&raquo;</button>
     </div>
   );
 }
@@ -324,49 +324,39 @@ export default function Home() {
     return { ni, inP, po, total: filtered.length, totalQty, totalUSD, conCotiz, sinCotiz, vencidas, avgQty };
   }, [filtered]);
 
+  // suppress unused var warnings
+  void statuses;
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-50 text-white" style={{ background: "linear-gradient(135deg, #821417 0%, #a32428 60%, #bd4c42 100%)", boxShadow: "0 4px 24px rgba(130,20,23,0.25)" }}>
-        <div className="max-w-[1700px] mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-11 h-11 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center text-sm font-black tracking-tighter shrink-0">TDV</div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight leading-tight">Pipeline Dashboard</h1>
-              <p className="text-[11px] text-white/60 mt-0.5">Textil del Valle · Seguimiento de órdenes activas · Cotizador híbrido real + estimado</p>
-            </div>
-          </div>
-          <div className="text-right hidden md:block border-l border-white/20 pl-5">
-            <p className="text-[11px] font-bold text-white/80 uppercase tracking-widest">Reporte de OPs</p>
-            <p className="text-[10px] text-white/40 mt-1">Actualizado en tiempo real</p>
+      <header className="sticky top-0 z-50 text-white bg-[#1e293b]" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.15)" }}>
+        <div className="max-w-[1700px] mx-auto px-6 py-3.5 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-[11px] font-black tracking-tight shrink-0">TDV</div>
+          <div>
+            <h1 className="text-base font-bold tracking-tight leading-tight">Pipeline Dashboard</h1>
+            <p className="text-[11px] text-white/50 mt-0.5">Textil del Valle &middot; Seguimiento de ordenes y rentabilidad</p>
           </div>
         </div>
       </header>
 
-      <main className="max-w-[1700px] mx-auto px-6 py-5">
-        {/* Summary */}
+      <main className="max-w-[1700px] mx-auto px-6 py-5 flex-1">
+        {/* Summary Cards */}
         {(() => {
-          const tabColors: Record<string, { accent: string; bg: string; border: string }> = {
-            ALL: { accent: "#374151", bg: "bg-white", border: "border-gray-100" },
-            NI: { accent: "#d97706", bg: "bg-amber-50/40", border: "border-amber-200/50" },
-            IN: { accent: "#16a34a", bg: "bg-emerald-50/40", border: "border-emerald-200/50" },
-            PO: { accent: "#821417", bg: "bg-red-50/40", border: "border-red-200/50" },
-          };
-          const tc = tabColors[statusFilter] || tabColors.ALL;
           const cards = [
-            { label: "Órdenes Activas", value: fmtNum(summary.total), sub: `${fmtNum(summary.conCotiz)} con cotizador`, borderLeft: "border-l-4 border-l-blue-400" },
-            { label: "Prendas Totales", value: fmtNum(summary.totalQty), sub: `${fmtNum(summary.avgQty)} prom. por OP`, borderLeft: "border-l-4 border-l-indigo-400" },
-            { label: "Monto USD (Precio × Cant.)", value: fmtUSD(summary.totalUSD), sub: summary.totalUSD > 0 ? `$${(summary.totalUSD / summary.total).toFixed(0)} prom. por OP` : "", borderLeft: "border-l-4 border-l-emerald-400" },
-            { label: "Sin Cotizador", value: fmtNum(summary.sinCotiz), sub: summary.total > 0 ? `${(summary.sinCotiz / summary.total * 100).toFixed(0)}% sin costo estimado` : "", borderLeft: "border-l-4 border-l-amber-400" },
-            { label: "Due Date Vencido", value: fmtNum(summary.vencidas), sub: summary.total > 0 ? `${(summary.vencidas / summary.total * 100).toFixed(0)}% fuera de plazo` : "", borderLeft: "border-l-4 border-l-red-400" },
+            { label: "Total Ordenes", value: fmtNum(summary.total), sub: `${fmtNum(summary.conCotiz)} con cotizador`, icon: "text-slate-500" },
+            { label: "Prendas", value: fmtNum(summary.totalQty), sub: `${fmtNum(summary.avgQty)} prom. por OP`, icon: "text-slate-500" },
+            { label: "Monto USD (Precio x Cant.)", value: fmtUSD(summary.totalUSD), sub: summary.totalUSD > 0 ? `$${(summary.totalUSD / summary.total).toFixed(0)} prom. por OP` : "", icon: "text-slate-500" },
+            { label: "Sin Costo Estimado", value: fmtNum(summary.sinCotiz), sub: summary.total > 0 ? `${(summary.sinCotiz / summary.total * 100).toFixed(0)}% del total` : "", icon: "text-amber-500" },
+            { label: "Fuera de Plazo", value: fmtNum(summary.vencidas), sub: summary.total > 0 ? `${(summary.vencidas / summary.total * 100).toFixed(0)}% del total` : "", icon: "text-red-500" },
           ];
           return (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
               {cards.map((c) => (
-                <div key={c.label} className={`bg-white rounded-xl border ${tc.border} ${c.borderLeft} px-4 py-3.5 shadow-sm transition-colors duration-200`}>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1">{c.label}</p>
-                  <p className="text-2xl font-bold leading-none" style={{ color: tc.accent }}>{c.value}</p>
-                  {c.sub && <p className="text-[11px] text-gray-400 mt-1.5 leading-tight">{c.sub}</p>}
+                <div key={c.label} className="bg-white rounded-xl border border-gray-100 px-4 py-3.5 shadow-sm">
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5">{c.label}</p>
+                  <p className={`text-3xl font-extrabold leading-none ${c.icon}`}>{c.value}</p>
+                  {c.sub && <p className="text-[11px] text-gray-400 mt-2 leading-tight">{c.sub}</p>}
                 </div>
               ))}
             </div>
@@ -383,85 +373,56 @@ export default function Home() {
           ].map((tab) => {
             const active = statusFilter === tab.key;
             const colorMap: Record<string, string> = {
-              gray: active ? "bg-gray-800 text-white" : "bg-white text-gray-600 hover:bg-gray-50",
-              amber: active ? "bg-amber-500 text-white" : "bg-white text-amber-700 hover:bg-amber-50",
-              emerald: active ? "bg-emerald-500 text-white" : "bg-white text-emerald-700 hover:bg-emerald-50",
-              red: active ? "bg-[#821417] text-white" : "bg-white text-[#821417] hover:bg-red-50",
+              gray: active ? "bg-slate-700 text-white" : "bg-white text-gray-500 hover:bg-gray-50",
+              amber: active ? "bg-amber-600/80 text-white" : "bg-white text-amber-700 hover:bg-amber-50",
+              emerald: active ? "bg-emerald-600/80 text-white" : "bg-white text-emerald-700 hover:bg-emerald-50",
+              red: active ? "bg-[#991b1b]/90 text-white" : "bg-white text-[#991b1b] hover:bg-red-50",
             };
             return (
               <button key={tab.key} onClick={() => setStatusFilter(tab.key)}
-                className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${active ? "border-transparent shadow-md" : "border-gray-100"} ${colorMap[tab.color]}`}>
+                className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${active ? "border-transparent shadow-md" : "border-gray-200"} ${colorMap[tab.color]}`}>
                 {tab.label} <span className={`ml-1.5 text-xs font-bold ${active ? "opacity-80" : "opacity-60"}`}>{tab.count}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Status legend */}
-        <div className="flex flex-wrap gap-x-6 gap-y-1 mb-5 px-1">
-          <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
-            <span className="inline-block w-2.5 h-2.5 rounded-sm bg-amber-400" />
-            <b className="text-gray-700 font-semibold">NI</b>
-            <span className="text-gray-400">— No Iniciada: PR creado, aún sin procesos activos</span>
-          </span>
-          <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
-            <span className="inline-block w-2.5 h-2.5 rounded-sm bg-emerald-500" />
-            <b className="text-gray-700 font-semibold">IN</b>
-            <span className="text-gray-400">— En Producción: WIPs en curso actualmente</span>
-          </span>
-          <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
-            <span className="inline-block w-2.5 h-2.5 rounded-sm bg-[#821417]" />
-            <b className="text-gray-700 font-semibold">PO</b>
-            <span className="text-gray-400">— Solo PO: pedido registrado sin PR ni WIPs</span>
-          </span>
-        </div>
-
-        {/* Filters */}
-        <div className="mb-5">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-1 h-4 rounded-full bg-[#821417]" />
-            <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Filtros</p>
+        {/* Filters — compact inline */}
+        <div className="flex flex-wrap gap-2.5 items-end mb-5">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">Buscar</label>
+            <input type="text" placeholder="Orden, cliente, estilo..."
+              className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 focus:border-slate-400 transition-shadow bg-white"
+              value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
-          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-3">
-            <div className="flex flex-wrap gap-2.5 items-end">
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">Buscar</label>
-                <input type="text" placeholder="Orden, cliente, estilo..."
-                  className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#bd4c42]/20 focus:border-[#bd4c42] transition-shadow"
-                  value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-              </div>
-              <FSelect label="Cliente" value={customerFilter} options={customers} onChange={setCustomerFilter} />
-              <FSelect label="Tipo" value={styleTypeFilter} options={["nuevo", "recurrente"]} onChange={setStyleTypeFilter} />
-              <button onClick={() => { setStatusFilter("ALL"); setCustomerFilter("ALL"); setStyleTypeFilter("ALL"); setMarginFilter("ALL"); setSearchTerm(""); }}
-                className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">Limpiar</button>
-            </div>
-          </div>
+          <FSelect label="Cliente" value={customerFilter} options={customers} onChange={setCustomerFilter} />
+          <FSelect label="Tipo" value={styleTypeFilter} options={["nuevo", "recurrente"]} onChange={setStyleTypeFilter} />
+          <button onClick={() => { setStatusFilter("ALL"); setCustomerFilter("ALL"); setStyleTypeFilter("ALL"); setMarginFilter("ALL"); setSearchTerm(""); }}
+            className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">Limpiar</button>
         </div>
 
         {/* Margin Classification Bar */}
         {!loading && !error && (marginCounts.saludable > 0 || marginCounts.atencion > 0 || marginCounts.critico > 0) && (
           <div className="mb-5">
-            <div className="bg-red-50/30 rounded-xl border border-red-100/50 p-4">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Criterio de clasificación — Margen sobre costo cotizado</p>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { key: "saludable" as const, count: marginCounts.saludable, label: "Saludable", sub: "Margen ≥ 10% — la orden tiene rentabilidad sólida", bg: marginFilter === "saludable" ? "bg-green-600" : "bg-green-500", cardBg: marginFilter === "saludable" ? "bg-green-50 border-green-300 shadow-md" : "bg-green-50/40 border-green-100 hover:border-green-300", textColor: "text-green-800" },
-                  { key: "atencion" as const, count: marginCounts.atencion, label: "Atención", sub: "Margen entre 0% y 9.9% — rentabilidad baja o al límite", bg: marginFilter === "atencion" ? "bg-amber-600" : "bg-amber-500", cardBg: marginFilter === "atencion" ? "bg-amber-50 border-amber-300 shadow-md" : "bg-amber-50/40 border-amber-100 hover:border-amber-300", textColor: "text-amber-800" },
-                  { key: "critico" as const, count: marginCounts.critico, label: "Crítico", sub: "Margen negativo (< 0%) — el costo supera al precio, genera pérdida", bg: marginFilter === "critico" ? "bg-red-700" : "bg-red-600", cardBg: marginFilter === "critico" ? "bg-red-50 border-red-300 shadow-md" : "bg-red-50/40 border-red-100 hover:border-red-300", textColor: "text-red-800" },
-                ].map(item => (
-                  <button key={item.key}
-                    onClick={() => setMarginFilter(prev => prev === item.key ? "ALL" : item.key)}
-                    className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all cursor-pointer text-left ${item.cardBg}`}>
-                    <div className={`w-11 h-11 rounded-full ${item.bg} text-white flex items-center justify-center text-lg font-bold shrink-0 transition-colors`}>
-                      {item.count}
-                    </div>
-                    <div>
-                      <p className={`text-sm font-bold ${item.textColor}`}>{item.label}</p>
-                      <p className="text-[10px] text-gray-500 leading-tight mt-0.5">{item.sub}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">Clasificacion por margen</p>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { key: "saludable" as const, count: marginCounts.saludable, label: "Saludable", sub: "Margen >= 10%", bg: marginFilter === "saludable" ? "bg-green-600" : "bg-green-500", cardBg: marginFilter === "saludable" ? "bg-green-50 border-green-300 shadow-md" : "bg-white border-gray-200 hover:border-green-300", textColor: "text-green-800" },
+                { key: "atencion" as const, count: marginCounts.atencion, label: "Atencion", sub: "Margen 0% - 9.9%", bg: marginFilter === "atencion" ? "bg-amber-600" : "bg-amber-500", cardBg: marginFilter === "atencion" ? "bg-amber-50 border-amber-300 shadow-md" : "bg-white border-gray-200 hover:border-amber-300", textColor: "text-amber-800" },
+                { key: "critico" as const, count: marginCounts.critico, label: "Critico", sub: "Margen negativo", bg: marginFilter === "critico" ? "bg-red-700" : "bg-red-600", cardBg: marginFilter === "critico" ? "bg-red-50 border-red-300 shadow-md" : "bg-white border-gray-200 hover:border-red-300", textColor: "text-red-800" },
+              ].map(item => (
+                <button key={item.key}
+                  onClick={() => setMarginFilter(prev => prev === item.key ? "ALL" : item.key)}
+                  className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all cursor-pointer text-left ${item.cardBg}`}>
+                  <div className={`w-10 h-10 rounded-full ${item.bg} text-white flex items-center justify-center text-base font-bold shrink-0 transition-colors`}>
+                    {item.count}
+                  </div>
+                  <div>
+                    <p className={`text-sm font-bold ${item.textColor}`}>{item.label}</p>
+                    <p className="text-[11px] text-gray-500 leading-tight mt-0.5">{item.sub}</p>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -472,26 +433,20 @@ export default function Home() {
         {/* Content */}
         {loading ? (
           <div className="flex items-center justify-center py-24">
-            <div className="animate-spin rounded-full h-8 w-8 border-[3px] border-[#821417] border-t-transparent" />
+            <div className="animate-spin rounded-full h-8 w-8 border-[3px] border-[#991b1b] border-t-transparent" />
             <span className="ml-3 text-gray-400 text-sm">Cargando...</span>
           </div>
         ) : error ? (
           <div className="bg-red-50 border border-red-100 rounded-xl p-8 text-center">
-            <p className="text-[#821417] font-semibold">Error al cargar datos</p>
+            <p className="text-[#991b1b] font-semibold">Error al cargar datos</p>
             <p className="text-sm text-gray-500 mt-1">{error}</p>
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between mb-2.5 px-0.5">
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-4 rounded-full bg-[#821417]" />
-                <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Órdenes de Producción</p>
-                <span className="text-xs text-gray-400 font-normal">· Clic en una fila para ver cotizador y detalle</span>
-              </div>
+              <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Ordenes de Produccion</p>
               <p className="text-[11px] text-gray-400">
-                <b className="text-gray-600">Costo Cotiz.</b> = costo híbrido real+estimado &nbsp;·&nbsp;
-                <b className="text-gray-600">Precio Cotiz.</b> = precio sugerido con margen &nbsp;·&nbsp;
-                <span className="text-[#821417] font-medium">clic en fila</span> para ver detalle
+                {fmtNum(filtered.length)} registros
               </p>
             </div>
             <TableCard count={filtered.length} page={page} totalPages={totalPages} onPage={setPage}>
@@ -506,38 +461,31 @@ export default function Home() {
               const isLoss = ganancia != null && ganancia < 0;
               return (
                 <div className={`mt-3 rounded-xl border shadow-sm overflow-hidden ${isLoss ? "border-red-200 bg-red-50/40" : "border-emerald-200 bg-emerald-50/40"}`}>
-                  {/* Header de la OP seleccionada */}
                   <div className="flex items-stretch gap-0 divide-x divide-gray-200/70">
-                    {/* Acento color */}
                     <div className={`w-1.5 shrink-0 ${isLoss ? "bg-red-400" : "bg-emerald-400"}`} />
-                    {/* Info principal */}
                     <div className="flex-1 px-5 py-4">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">OP seleccionada</span>
-                        <button onClick={() => setSelectedOrder(null)} className="text-[10px] text-gray-400 hover:text-gray-600 transition-colors ml-auto">✕ Cerrar</button>
+                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">OP seleccionada</span>
+                        <button onClick={() => setSelectedOrder(null)} className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors ml-auto">&times; Cerrar</button>
                       </div>
-                      <p className="text-sm font-bold text-gray-900">{selectedOrder} <span className="font-normal text-gray-500">· {opSel?.po_customer_name?.trim()}</span></p>
+                      <p className="text-sm font-bold text-gray-900">{selectedOrder} <span className="font-normal text-gray-500">&middot; {opSel?.po_customer_name?.trim()}</span></p>
                       <p className="text-[11px] text-gray-500 mt-0.5">
                         {Number(opSel?.pol_requested_q).toLocaleString()} prendas
-                        {opSel?.pol_unit_price ? <> · Precio cliente <b className="text-gray-700">${Number(opSel.pol_unit_price).toFixed(2)}</b></> : " · Sin precio cliente"}
-                        {costo != null ? <> · Costo cotizador <b className="text-gray-700">${costo.toFixed(2)}</b></> : " · Sin cotizador"}
-                        <span className="ml-2 text-[10px] font-medium text-gray-400">{opSel?.pol_garment_class_description?.trim()} · {opSel?.status}</span>
+                        {opSel?.pol_unit_price ? <> &middot; Precio <b className="text-gray-700">${Number(opSel.pol_unit_price).toFixed(2)}</b></> : " · Sin precio"}
+                        {costo != null ? <> &middot; Costo <b className="text-gray-700">${costo.toFixed(2)}</b></> : " · Sin cotizador"}
+                        <span className="ml-2 text-[11px] font-medium text-gray-400">{opSel?.pol_garment_class_description?.trim()} &middot; {opSel?.status}</span>
                       </p>
                     </div>
-                    {/* Gap por prenda */}
                     {gap != null && (
                       <div className="px-5 py-4 text-center min-w-[130px]">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Gap por prenda</p>
+                        <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Gap / prenda</p>
                         <p className={`text-xl font-bold ${isLoss ? "text-red-600" : "text-emerald-600"}`}>{gap > 0 ? "+" : ""}{gap.toFixed(2)}</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">precio − costo</p>
                       </div>
                     )}
-                    {/* Ganancia/pérdida total */}
                     {ganancia != null && (
                       <div className="px-5 py-4 text-center min-w-[160px]">
-                        <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">{isLoss ? "Pérdida total" : "Ganancia total"}</p>
+                        <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">{isLoss ? "Perdida total" : "Ganancia total"}</p>
                         <p className={`text-xl font-bold ${isLoss ? "text-red-600" : "text-emerald-600"}`}>{ganancia > 0 ? "+" : ""}${Math.abs(ganancia).toLocaleString("es-PE", { maximumFractionDigits: 0 })}</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">gap × prendas</p>
                       </div>
                     )}
                   </div>
@@ -548,18 +496,24 @@ export default function Home() {
           </>
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-200 bg-white">
+        <div className="max-w-[1700px] mx-auto px-6 py-3 text-center">
+          <p className="text-[11px] text-gray-400">TDV Textil del Valle &middot; Pipeline Dashboard &middot; Datos actualizados al {new Date().toLocaleDateString("es-PE", { day: "2-digit", month: "long", year: "numeric" })}</p>
+        </div>
+      </footer>
     </div>
   );
 }
 
 /* ───── Analytics Section ───── */
-const MARCA_COLORS_A = ["#821417", "#10b981", "#f59e0b", "#3b82f6", "#8b5cf6", "#f472b6", "#14b8a6"];
+const MARCA_COLORS_A = ["#991b1b", "#10b981", "#f59e0b", "#3b82f6", "#8b5cf6", "#f472b6", "#14b8a6"];
 const AVANCE_COLORS_A = ["#e5e7eb", "#3b82f6", "#6366f1", "#8b5cf6", "#a855f7", "#10b981"];
 
 type ScatterPoint = { x: number; y: number; z: number; impacto: number; op: string; marca: string; qty: number; gap: number; status: string };
 
 function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; onSelectOp: (id: string) => void; selectedOrder: string | null }) {
-  const [open, setOpen] = useState(true);
   const [chartSelected, setChartSelected] = useState<ScatterPoint | null>(null);
 
   const analytics = useMemo(() => {
@@ -597,18 +551,19 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
     }
 
     const topMarcas = Object.entries(marcaMap).sort((a, b) => b[1] - a[1]).slice(0, 7).map(([name, value]) => ({ name, value }));
-    const totalPerdida = scatterData.filter(s => s.impacto < 0).reduce((a, b) => a + b.impacto, 0);
-    const totalGanancia = scatterData.filter(s => s.impacto >= 0).reduce((a, b) => a + b.impacto, 0);
-    const neto = totalPerdida + totalGanancia;
-    const scatterLoss = scatterData.filter(s => s.impacto < 0);
-    const scatterGain = scatterData.filter(s => s.impacto >= 0);
     const scatterNI = scatterData.filter(s => s.status === "NI");
     const scatterIN = scatterData.filter(s => s.status === "IN");
     const scatterOther = scatterData.filter(s => s.status !== "NI" && s.status !== "IN");
     const marcaBarData = topMarcas.map(m => ({
-      name: m.name.length > 10 ? m.name.slice(0, 10) + "…" : m.name,
+      name: m.name.length > 10 ? m.name.slice(0, 10) + "\u2026" : m.name,
       total: m.value,
       sinCot: data.filter(d => (d.po_customer_name?.trim() || "N/A") === m.name && !d.cotizador).length,
+    }));
+
+    // Convert pie to horizontal bar for OPs por cliente
+    const marcaHBarData = topMarcas.map(m => ({
+      name: m.name.length > 12 ? m.name.slice(0, 12) + "\u2026" : m.name,
+      ops: m.value,
     }));
 
     // Rentabilidad neta por cliente
@@ -620,12 +575,8 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
       else rentMap[s.marca].perdida += s.impacto;
     }
     const rentByCliente = Object.entries(rentMap)
-      .map(([name, v]) => ({ name: name.length > 16 ? name.slice(0, 16) + "…" : name, neto: Math.round(v.ganancia + v.perdida), ganancia: Math.round(v.ganancia), perdida: Math.round(v.perdida), ops: v.ops }))
+      .map(([name, v]) => ({ name: name.length > 16 ? name.slice(0, 16) + "\u2026" : name, neto: Math.round(v.ganancia + v.perdida), ganancia: Math.round(v.ganancia), perdida: Math.round(v.perdida), ops: v.ops }))
       .sort((a, b) => a.neto - b.neto);
-
-    // Alertas accionables
-    const alertasIN = scatterData.filter(s => s.status === "IN" && s.impacto < 0).sort((a, b) => a.impacto - b.impacto).slice(0, 6);
-    const alertasNI = scatterData.filter(s => s.status === "NI" && s.impacto < 0).sort((a, b) => a.impacto - b.impacto).slice(0, 6);
 
     // Diagonal y=x para scatter
     const diagLine: ScatterPoint[] = scatterData.length > 0 ? (() => {
@@ -638,10 +589,9 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
       ];
     })() : [];
 
-    return { avanceDist, topMarcas, marcaBarData, scatterLoss, scatterGain, scatterNI, scatterIN, scatterOther, rentByCliente, alertasIN, alertasNI, diagLine, enPerdida: scatterData.filter(s => s.impacto < 0).length, conPrecio: scatterData.length, totalPerdida: Math.round(totalPerdida), totalGanancia: Math.round(totalGanancia), neto: Math.round(neto) };
+    return { avanceDist, topMarcas, marcaBarData, marcaHBarData, scatterNI, scatterIN, scatterOther, rentByCliente, diagLine, conPrecio: scatterData.length };
   }, [data]);
 
-  const fmtK = (n: number) => (n < 0 ? "-" : "+") + "$" + Math.abs(n).toLocaleString("es-PE", { maximumFractionDigits: 0 });
   const cardBase = "rounded-xl border px-4 py-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)]";
 
   // Derived context for selected OP — used to highlight other charts
@@ -664,10 +614,11 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
   useEffect(() => {
     if (!selectedOrder) { setChartSelected(null); return; }
     const id = selectedOrder.trim();
-    const pt = [...analytics.scatterLoss, ...analytics.scatterGain].find(p => p.op === id);
-    if (pt) { setChartSelected(pt); setOpen(true); }
+    const allScatter = [...analytics.scatterNI, ...analytics.scatterIN, ...analytics.scatterOther];
+    const pt = allScatter.find(p => p.op === id);
+    if (pt) { setChartSelected(pt); }
     else setChartSelected(null);
-  }, [selectedOrder, analytics.scatterLoss, analytics.scatterGain]);
+  }, [selectedOrder, analytics.scatterNI, analytics.scatterIN, analytics.scatterOther]);
 
   function handleScatterClick(pt: ScatterPoint) {
     setChartSelected(pt);
@@ -678,262 +629,163 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
   const scatterTooltip = ({ payload }: any) => {
     if (!payload?.length) return null;
     const d = payload[0].payload as ScatterPoint;
-    if (!d.op) return null; // punto diagonal
+    if (!d.op) return null;
     return (
       <div className="bg-white border border-gray-200 rounded-lg p-2.5 shadow-lg text-[11px]">
-        <p className="font-semibold text-gray-800 mb-1">OP {d.op} · {d.marca}</p>
-        <p className="text-gray-500">Precio: <b>${Number(d.x).toFixed(2)}</b> · Costo: <b>${Number(d.y).toFixed(2)}</b></p>
-        <p className="text-gray-500">Gap: <b className={d.impacto < 0 ? "text-red-600" : "text-emerald-600"}>{d.gap > 0 ? "+" : ""}{Number(d.gap).toFixed(2)}/pda</b> · {Number(d.qty).toLocaleString()} prendas</p>
-        <p className={`font-semibold mt-1 ${d.impacto < 0 ? "text-red-600" : "text-emerald-600"}`}>{d.impacto < 0 ? "Pérdida" : "Ganancia"}: ${Math.abs(Number(d.impacto)).toLocaleString()}</p>
-        <p className="text-gray-400 mt-1">Clic para ver cotizador ↓</p>
+        <p className="font-semibold text-gray-800 mb-1">OP {d.op} &middot; {d.marca}</p>
+        <p className="text-gray-500">Precio: <b>${Number(d.x).toFixed(2)}</b> &middot; Costo: <b>${Number(d.y).toFixed(2)}</b></p>
+        <p className="text-gray-500">Gap: <b className={d.impacto < 0 ? "text-red-600" : "text-emerald-600"}>{d.gap > 0 ? "+" : ""}{Number(d.gap).toFixed(2)}/pda</b> &middot; {Number(d.qty).toLocaleString()} prendas</p>
+        <p className={`font-semibold mt-1 ${d.impacto < 0 ? "text-red-600" : "text-emerald-600"}`}>{d.impacto < 0 ? "Perdida" : "Ganancia"}: ${Math.abs(Number(d.impacto)).toLocaleString()}</p>
       </div>
     );
   };
 
   return (
     <div className="mb-5">
-      {/* Toggle */}
-      <button onClick={() => setOpen(o => !o)}
-        className={`w-full bg-white rounded-xl border shadow-sm px-4 py-2.5 flex items-center justify-between text-left mb-2 hover:bg-gray-50 transition-colors ${open ? "border-[#821417]/20" : "border-gray-100"}`}>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-1 h-4 rounded-full bg-[#821417]" />
-            <div>
-              <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider">Análisis de Rentabilidad</span>
-              <p className="text-[10px] text-gray-400 mt-0.5">Avance de WIPs · Distribución por marca · Precio vs Costo cotizador</p>
-            </div>
+      <p className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Analisis de Rentabilidad</p>
+
+      {/* Row 1: Rentabilidad por cliente + Scatter */}
+      {analytics.conPrecio > 0 && (
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          {/* Rentabilidad neta por cliente */}
+          <div className={`${cardBase} bg-white border-gray-100`}>
+            <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Rentabilidad neta por cliente</p>
+            <p className="text-[11px] text-gray-400 mb-3 mt-0.5"><span className="text-emerald-600 font-medium">Verde = neto positivo</span> &middot; <span className="text-red-500 font-medium">Rojo = perdida neta</span></p>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={analytics.rentByCliente} layout="vertical" barSize={14} margin={{ top: 0, right: 64, left: 8, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+                <XAxis type="number" tickFormatter={v => `$${(v / 1000).toFixed(0)}K`} tick={{ fontSize: 9, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: "#6b7280" }} axisLine={false} tickLine={false} width={72} />
+                <Tooltip
+                  contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  formatter={(v: any, _: any, p: any) => [`$${Math.abs(Number(v)).toLocaleString()}`, p.payload.neto < 0 ? "Perdida neta" : "Ganancia neta"]}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  labelFormatter={(l: any) => `${l} \u00b7 ${analytics.rentByCliente.find(r => r.name === l)?.ops ?? 0} OPs`}
+                />
+                <Bar dataKey="neto" radius={[0, 3, 3, 0]}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  label={{ position: "right", formatter: (v: any) => `$${(Math.abs(v) / 1000).toFixed(1)}K`, fontSize: 9, fill: "#9ca3af" }}>
+                  {analytics.rentByCliente.map((d, i) => (
+                    <Cell key={i} fill={d.neto >= 0 ? "#10b981" : "#ef4444"} fillOpacity={0.78} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-          {!open && analytics.conPrecio > 0 && (
-            <span className={`text-[11px] font-semibold ${analytics.neto >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-              Neto: {fmtK(analytics.neto)} · {analytics.enPerdida} OPs en pérdida de {analytics.conPrecio} con precio
-            </span>
-          )}
+          {/* Scatter Precio vs Costo */}
+          <div className={`${cardBase} bg-white border-gray-100`}>
+            <div className="flex items-start justify-between mb-2">
+              <div>
+                <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Precio vs Costo</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">Sobre diagonal = perdida &middot; Tamano = impacto total</p>
+              </div>
+              <div className="flex gap-2 text-[11px] text-gray-500 shrink-0">
+                {analytics.scatterNI.length > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> NI ({analytics.scatterNI.length})</span>}
+                {analytics.scatterIN.length > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> IN ({analytics.scatterIN.length})</span>}
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={240}>
+              <ScatterChart margin={{ top: 10, right: 20, bottom: 24, left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                <XAxis type="number" dataKey="x" name="Precio" tickFormatter={v => `$${v}`} tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} label={{ value: "Precio cliente ($/pda)", position: "insideBottom", offset: -14, fontSize: 11, fill: "#9ca3af" }} />
+                <YAxis type="number" dataKey="y" name="Costo" tickFormatter={v => `$${v}`} tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} label={{ value: "Costo cotizador", angle: -90, position: "insideLeft", offset: 10, fontSize: 11, fill: "#9ca3af" }} />
+                <ZAxis type="number" dataKey="z" range={[20, 400]} />
+                <Tooltip content={scatterTooltip} />
+                {analytics.diagLine.length > 0 && (
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  <Scatter name="_diag" data={analytics.diagLine} line={{ stroke: "#94a3b8", strokeDasharray: "5 3", strokeWidth: 1.5 } as any} shape={() => <g />} legendType="none" fill="transparent" />
+                )}
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {analytics.scatterNI.length > 0 && <Scatter name="NI" data={analytics.scatterNI} fill="#f59e0b44" stroke="#f59e0b" strokeWidth={1.5} cursor="pointer" onClick={(d: any) => handleScatterClick(d as ScatterPoint)} />}
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {analytics.scatterIN.length > 0 && <Scatter name="IN" data={analytics.scatterIN} fill="#10b98144" stroke="#10b981" strokeWidth={1.5} cursor="pointer" onClick={(d: any) => handleScatterClick(d as ScatterPoint)} />}
+                {analytics.scatterOther.length > 0 && (
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  <Scatter name="PO/Otros" data={analytics.scatterOther} fill="#94a3b844" stroke="#94a3b8" strokeWidth={1} cursor="pointer" onClick={(d: any) => handleScatterClick(d as ScatterPoint)} />
+                )}
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-        <span className="text-gray-400 text-[11px]">{open ? "▲ ocultar" : "▼ mostrar"}</span>
-      </button>
-
-      {open && (
-        <>
-          {/* Monetary KPIs */}
-          {analytics.conPrecio > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-              {[
-                { label: "Pérdida total estimada", value: fmtK(analytics.totalPerdida), sub: `${analytics.enPerdida} OPs · costo > precio cliente`, cls: "bg-red-50/40 border-red-100/50", valCls: "text-red-600" },
-                { label: "Ganancia total estimada", value: fmtK(analytics.totalGanancia), sub: `${analytics.conPrecio - analytics.enPerdida} OPs · precio > costo`, cls: "bg-emerald-50/40 border-emerald-100/50", valCls: "text-emerald-600" },
-                { label: "Neto estimado (gap × qty)", value: fmtK(analytics.neto), sub: `sobre ${analytics.conPrecio} OPs con precio`, cls: analytics.neto >= 0 ? "bg-emerald-50/40 border-emerald-100/50" : "bg-red-50/40 border-red-100/50", valCls: analytics.neto >= 0 ? "text-emerald-600" : "text-red-600" },
-                { label: "Con precio cliente", value: String(analytics.conPrecio), sub: `${data.length > 0 ? Math.round(analytics.conPrecio / data.length * 100) : 0}% tienen pol_unit_price`, cls: "bg-white border-gray-100", valCls: "text-gray-700" },
-                { label: "Sin precio cliente", value: String(data.length - analytics.conPrecio), sub: `${data.length > 0 ? Math.round((data.length - analytics.conPrecio) / data.length * 100) : 0}% sin datos de precio`, cls: "bg-white border-gray-100", valCls: "text-gray-700" },
-              ].map(c => (
-                <div key={c.label} className={`${cardBase} ${c.cls}`}>
-                  <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">{c.label}</p>
-                  <p className={`text-xl font-bold mt-0.5 ${c.valCls}`}>{c.value}</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">{c.sub}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Row 1: Rentabilidad por cliente + Scatter NI/IN */}
-          {analytics.conPrecio > 0 && (
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              {/* Rentabilidad neta por cliente */}
-              <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4">
-                <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Rentabilidad neta por cliente</p>
-                <p className="text-[10px] text-gray-400 mb-3 mt-0.5"><span className="text-emerald-600 font-medium">Verde = neto positivo</span> · <span className="text-red-500 font-medium">Rojo = pérdida neta</span> · Suma de (precio − costo) × qty</p>
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={analytics.rentByCliente} layout="vertical" barSize={14} margin={{ top: 0, right: 64, left: 8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-                    <XAxis type="number" tickFormatter={v => `$${(v / 1000).toFixed(0)}K`} tick={{ fontSize: 9, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: "#6b7280" }} axisLine={false} tickLine={false} width={72} />
-                    <Tooltip
-                      contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }}
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      formatter={(v: any, _: any, p: any) => [`$${Math.abs(Number(v)).toLocaleString()}`, p.payload.neto < 0 ? "Pérdida neta" : "Ganancia neta"]}
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      labelFormatter={(l: any) => `${l} · ${analytics.rentByCliente.find(r => r.name === l)?.ops ?? 0} OPs`}
-                    />
-                    <Bar dataKey="neto" radius={[0, 3, 3, 0]}
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      label={{ position: "right", formatter: (v: any) => `$${(Math.abs(v) / 1000).toFixed(1)}K`, fontSize: 9, fill: "#9ca3af" }}>
-                      {analytics.rentByCliente.map((d, i) => (
-                        <Cell key={i} fill={d.neto >= 0 ? "#10b981" : "#ef4444"} fillOpacity={0.78} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              {/* Scatter 4-cuadrantes NI / IN */}
-              <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Precio vs Costo{analytics.scatterNI.length > 0 && analytics.scatterIN.length > 0 ? " — NI / IN" : analytics.scatterNI.length > 0 ? " — NI" : analytics.scatterIN.length > 0 ? " — IN" : ""}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">Sobre diagonal = pérdida · tamaño = impacto total · <span className="text-[#821417] font-medium">Clic → cotizador</span></p>
-                  </div>
-                  <div className="flex gap-2 text-[10px] text-gray-500 shrink-0">
-                    {analytics.scatterNI.length > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> NI ({analytics.scatterNI.length})</span>}
-                    {analytics.scatterIN.length > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> IN ({analytics.scatterIN.length})</span>}
-                  </div>
-                </div>
-                <ResponsiveContainer width="100%" height={240}>
-                  <ScatterChart margin={{ top: 10, right: 20, bottom: 24, left: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                    <XAxis type="number" dataKey="x" name="Precio" tickFormatter={v => `$${v}`} tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} label={{ value: "Precio cliente ($/pda)", position: "insideBottom", offset: -14, fontSize: 10, fill: "#9ca3af" }} />
-                    <YAxis type="number" dataKey="y" name="Costo" tickFormatter={v => `$${v}`} tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} label={{ value: "Costo cotizador", angle: -90, position: "insideLeft", offset: 10, fontSize: 10, fill: "#9ca3af" }} />
-                    <ZAxis type="number" dataKey="z" range={[20, 400]} />
-                    <Tooltip content={scatterTooltip} />
-                    {/* Diagonal y=x */}
-                    {analytics.diagLine.length > 0 && (
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      <Scatter name="_diag" data={analytics.diagLine} line={{ stroke: "#94a3b8", strokeDasharray: "5 3", strokeWidth: 1.5 } as any} shape={() => <g />} legendType="none" fill="transparent" />
-                    )}
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    {analytics.scatterNI.length > 0 && <Scatter name="NI" data={analytics.scatterNI} fill="#f59e0b44" stroke="#f59e0b" strokeWidth={1.5} cursor="pointer" onClick={(d: any) => handleScatterClick(d as ScatterPoint)} />}
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    {analytics.scatterIN.length > 0 && <Scatter name="IN" data={analytics.scatterIN} fill="#10b98144" stroke="#10b981" strokeWidth={1.5} cursor="pointer" onClick={(d: any) => handleScatterClick(d as ScatterPoint)} />}
-                    {analytics.scatterOther.length > 0 && (
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      <Scatter name="PO/Otros" data={analytics.scatterOther} fill="#94a3b844" stroke="#94a3b8" strokeWidth={1} cursor="pointer" onClick={(d: any) => handleScatterClick(d as ScatterPoint)} />
-                    )}
-                  </ScatterChart>
-                </ResponsiveContainer>
-                <p className="text-[10px] text-gray-400 mt-1 text-center">
-                  Puntos <b>sobre la diagonal</b> (costo &gt; precio) → pérdida · <b>bajo</b> → ganancia
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Alertas accionables — solo muestra paneles que tengan datos */}
-          {analytics.conPrecio > 0 && (analytics.alertasIN.length > 0 || analytics.alertasNI.length > 0) && (
-            <div className={`grid gap-4 mb-4 ${analytics.alertasIN.length > 0 && analytics.alertasNI.length > 0 ? "grid-cols-2" : "grid-cols-1"}`}>
-              {/* IN urgente — solo si hay alertas IN */}
-              {analytics.alertasIN.length > 0 && (
-              <div className="bg-red-50/40 rounded-xl border border-red-100/70 p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block" />
-                  <p className="text-[11px] font-bold text-red-700 uppercase tracking-wider">IN · En producción con pérdida</p>
-                  <span className="ml-auto text-[10px] text-red-400 font-medium">{analytics.alertasIN.length} OPs</span>
-                </div>
-                <div className="space-y-1.5">
-                  {analytics.alertasIN.map(a => (
-                    <button key={a.op} onClick={() => handleScatterClick(a)}
-                      className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg bg-white border transition-colors text-[11px] ${chartSelected?.op === a.op ? "border-red-400 shadow-sm" : "border-red-100 hover:border-red-300"}`}>
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-gray-800">OP {a.op}</span>
-                        <span className="text-gray-400 text-[10px]">{a.marca.length > 18 ? a.marca.slice(0, 18) + "…" : a.marca}</span>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="font-bold text-red-600 block">${Math.abs(a.impacto).toLocaleString()}</span>
-                        <span className="text-gray-400 text-[10px]">{a.qty.toLocaleString()} pda</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              )}
-              {/* NI negociable — solo si hay alertas NI */}
-              {analytics.alertasNI.length > 0 && (
-              <div className="bg-amber-50/40 rounded-xl border border-amber-100/70 p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
-                  <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">NI · Antes de producción — negociable</p>
-                  <span className="ml-auto text-[10px] text-amber-500 font-medium">{analytics.alertasNI.length} OPs</span>
-                </div>
-                <div className="space-y-1.5">
-                  {analytics.alertasNI.map(a => (
-                    <button key={a.op} onClick={() => handleScatterClick(a)}
-                      className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-lg bg-white border transition-colors text-[11px] ${chartSelected?.op === a.op ? "border-amber-400 shadow-sm" : "border-amber-100 hover:border-amber-300"}`}>
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-gray-800">OP {a.op}</span>
-                        <span className="text-gray-400 text-[10px]">{a.marca.length > 18 ? a.marca.slice(0, 18) + "…" : a.marca}</span>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="font-bold text-amber-600 block">${Math.abs(a.impacto).toLocaleString()}</span>
-                        <span className="text-gray-400 text-[10px]">{a.qty.toLocaleString()} pda</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              )}
-            </div>
-          )}
-
-
-          {/* Row 2: Avance WIPs + Marcas donut + Cobertura cotizador */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4">
-              <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Avance de WIPs por OP</p>
-              <p className="text-[10px] text-gray-400 mb-3 mt-0.5">% de procesos completados del total de WIPs por orden</p>
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={analytics.avanceDist} barSize={28} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb", boxShadow: "0 4px 6px -1px rgba(0,0,0,.06)" }} formatter={(v) => [v + " OPs", "Cantidad"]} />
-                  <Bar dataKey="count" name="OPs" radius={[4, 4, 0, 0]}>
-                    {analytics.avanceDist.map((entry, i) => (
-                      <Cell key={i} fill={AVANCE_COLORS_A[i]}
-                        fillOpacity={selectedCtx ? (entry.name === selectedCtx.bucket ? 1 : 0.2) : 1}
-                        stroke={selectedCtx?.bucket === entry.name ? "#821417" : "none"}
-                        strokeWidth={2}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4">
-              <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">OPs por cliente / marca</p>
-              <p className="text-[10px] text-gray-400 mb-3 mt-0.5">Distribución del portafolio activo de órdenes</p>
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie data={analytics.topMarcas} cx="38%" cy="50%" innerRadius={42} outerRadius={65} dataKey="value" nameKey="name" paddingAngle={2}>
-                    {analytics.topMarcas.map((entry, i) => (
-                      <Cell key={i} fill={MARCA_COLORS_A[i % MARCA_COLORS_A.length]}
-                        fillOpacity={selectedCtx ? (entry.name === selectedCtx.marca ? 1 : 0.2) : 1}
-                        stroke={selectedCtx?.marca === entry.name ? "#821417" : "none"}
-                        strokeWidth={2}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }} formatter={(v, n) => [v + " OPs", n]} />
-                  <Legend iconType="circle" iconSize={7} formatter={(v) => <span style={{ fontSize: 10, color: "#6b7280" }}>{v}</span>} layout="vertical" align="right" verticalAlign="middle" />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.04)] p-4">
-              <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Cobertura de cotizador por marca</p>
-              <p className="text-[10px] text-gray-400 mb-3 mt-0.5"><span className="text-[#821417] font-medium">Total OPs</span> vs <span className="text-amber-500 font-medium">sin cotizador asignado</span></p>
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={analytics.marcaBarData} barSize={10} margin={{ top: 0, right: 8, left: -16, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 9, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 9, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }} />
-                  <Bar dataKey="total" name="Total OPs" fill="#821417" radius={[3, 3, 0, 0]}>
-                    {analytics.marcaBarData.map((entry, i) => (
-                      <Cell key={i} fill="#821417"
-                        fillOpacity={selectedCtx ? (entry.name.replace("…","").trim() === selectedCtx.marca.slice(0,10).trim() || selectedCtx.marca.startsWith(entry.name.replace("…","")) ? 1 : 0.2) : 0.75}
-                        stroke={selectedCtx?.marca.startsWith(entry.name.replace("…","")) ? "#821417" : "none"}
-                        strokeWidth={2}
-                      />
-                    ))}
-                  </Bar>
-                  <Bar dataKey="sinCot" name="Sin cotiz." fill="#f59e0b" radius={[3, 3, 0, 0]}>
-                    {analytics.marcaBarData.map((entry, i) => (
-                      <Cell key={i} fill="#f59e0b"
-                        fillOpacity={selectedCtx ? (selectedCtx.marca.startsWith(entry.name.replace("…","")) ? 1 : 0.2) : 0.75}
-                      />
-                    ))}
-                  </Bar>
-                  <Legend iconType="circle" iconSize={7} formatter={(v) => <span style={{ fontSize: 10, color: "#6b7280" }}>{v}</span>} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </>
       )}
+
+      {/* Row 2: Cobertura + OPs por cliente (bar) + Avance WIPs */}
+      <div className="grid grid-cols-3 gap-4">
+        {/* Cobertura de cotizador por marca */}
+        <div className={`${cardBase} bg-white border-gray-100`}>
+          <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Cobertura de cotizador por marca</p>
+          <p className="text-[11px] text-gray-400 mb-3 mt-0.5"><span className="text-[#991b1b] font-medium">Total OPs</span> vs <span className="text-amber-500 font-medium">sin cotizador</span></p>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={analytics.marcaBarData} barSize={10} margin={{ top: 0, right: 8, left: -16, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 9, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 9, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }} />
+              <Bar dataKey="total" name="Total OPs" fill="#991b1b" radius={[3, 3, 0, 0]}>
+                {analytics.marcaBarData.map((entry, i) => (
+                  <Cell key={i} fill="#991b1b"
+                    fillOpacity={selectedCtx ? (entry.name.replace("\u2026","").trim() === selectedCtx.marca.slice(0,10).trim() || selectedCtx.marca.startsWith(entry.name.replace("\u2026","")) ? 1 : 0.2) : 0.75}
+                    stroke={selectedCtx?.marca.startsWith(entry.name.replace("\u2026","")) ? "#991b1b" : "none"}
+                    strokeWidth={2}
+                  />
+                ))}
+              </Bar>
+              <Bar dataKey="sinCot" name="Sin cotiz." fill="#f59e0b" radius={[3, 3, 0, 0]}>
+                {analytics.marcaBarData.map((entry, i) => (
+                  <Cell key={i} fill="#f59e0b"
+                    fillOpacity={selectedCtx ? (selectedCtx.marca.startsWith(entry.name.replace("\u2026","")) ? 1 : 0.2) : 0.75}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        {/* OPs por cliente — horizontal bar (converted from pie) */}
+        <div className={`${cardBase} bg-white border-gray-100`}>
+          <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">OPs por cliente</p>
+          <p className="text-[11px] text-gray-400 mb-3 mt-0.5">Distribucion del portafolio activo</p>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={analytics.marcaHBarData} layout="vertical" barSize={14} margin={{ top: 0, right: 32, left: 8, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 9, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: "#6b7280" }} axisLine={false} tickLine={false} width={72} />
+              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb" }} formatter={(v) => [v + " OPs", "Cantidad"]} />
+              <Bar dataKey="ops" name="OPs" radius={[0, 3, 3, 0]}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                label={{ position: "right", formatter: (v: any) => v, fontSize: 9, fill: "#9ca3af" }}>
+                {analytics.marcaHBarData.map((entry, i) => (
+                  <Cell key={i} fill={MARCA_COLORS_A[i % MARCA_COLORS_A.length]}
+                    fillOpacity={selectedCtx ? (selectedCtx.marca.startsWith(entry.name.replace("\u2026","")) ? 1 : 0.2) : 0.85}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        {/* Avance de WIPs */}
+        <div className={`${cardBase} bg-white border-gray-100`}>
+          <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Avance de WIPs por OP</p>
+          <p className="text-[11px] text-gray-400 mb-3 mt-0.5">% de procesos completados del total de WIPs por orden</p>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={analytics.avanceDist} barSize={28} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e5e7eb", boxShadow: "0 4px 6px -1px rgba(0,0,0,.06)" }} formatter={(v) => [v + " OPs", "Cantidad"]} />
+              <Bar dataKey="count" name="OPs" radius={[4, 4, 0, 0]}>
+                {analytics.avanceDist.map((entry, i) => (
+                  <Cell key={i} fill={AVANCE_COLORS_A[i]}
+                    fillOpacity={selectedCtx ? (entry.name === selectedCtx.bucket ? 1 : 0.2) : 1}
+                    stroke={selectedCtx?.bucket === entry.name ? "#991b1b" : "none"}
+                    strokeWidth={2}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   );
 }
@@ -956,7 +808,7 @@ function FSelect({ label, value, options, onChange }: { label: string; value: st
   return (
     <div className="min-w-[130px]">
       <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wider mb-1">{label}</label>
-      <select className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#bd4c42]/20 focus:border-[#bd4c42] transition-shadow"
+      <select className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 focus:border-slate-400 transition-shadow"
         value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="ALL">Todos</option>
         {options.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -1004,19 +856,19 @@ function getPrecioCotiz(cot: Cotizador | null | undefined, cliente: string): num
 }
 
 /* ───── Table styles ───── */
-const th = "px-3 py-2.5 text-left text-[10px] font-bold text-gray-500 uppercase tracking-widest bg-gray-50 border-b border-gray-200 whitespace-nowrap sticky top-0";
+const th = "px-3 py-2.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-widest bg-slate-100 border-b border-gray-200 whitespace-nowrap sticky top-0";
 const td = "px-3 py-2.5 text-[13px] border-b border-gray-100 whitespace-nowrap";
 
 /* ───── Sortable Header ───── */
 function SortTh({ col, label, sortCol, sortDir, onSort, right }: { col: string; label: string; sortCol: string; sortDir: string; onSort: (c: string) => void; right?: boolean }) {
   const active = sortCol === col;
   return (
-    <th className={`${th} ${right ? "text-right" : ""} cursor-pointer select-none group hover:bg-gray-100/80 transition-colors`}
+    <th className={`${th} ${right ? "text-right" : ""} cursor-pointer select-none group hover:bg-slate-200/60 transition-colors`}
       onClick={(e) => { e.stopPropagation(); onSort(col); }}>
       <span className="inline-flex items-center gap-1">
         {label}
         <span className={`text-[9px] transition-opacity ${active ? "opacity-100" : "opacity-0 group-hover:opacity-40"}`}>
-          {active ? (sortDir === "asc" ? "▲" : "▼") : "▲"}
+          {active ? (sortDir === "asc" ? "\u25B2" : "\u25BC") : "\u25B2"}
         </span>
       </span>
     </th>
@@ -1032,9 +884,7 @@ const Z0Table = memo(({ rows, selectedOrder, onSelect, sortCol, sortDir, onSort,
       <SortTh col="order_id" label="OP" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
       <SortTh col="po_customer_name" label="Cliente" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
       <SortTh col="pol_garment_class_description" label="Prenda" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
-      <th className={th}>Grupo</th>
       <SortTh col="pol_customer_style_id" label="Est. Cliente" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
-      <SortTh col="pols_factory_style_id" label="Est. Propio" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
       <SortTh col="style_type" label="Tipo" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
       <th className={th}>WIP Actual</th>
       <SortTh col="pol_unit_price" label="Precio" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
@@ -1044,54 +894,46 @@ const Z0Table = memo(({ rows, selectedOrder, onSelect, sortCol, sortDir, onSort,
       <SortTh col="precio_cotiz" label="Precio Cotiz." sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
       <SortTh col="costo_total" label="Costo Total" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
       <SortTh col="due_date" label="Due Date" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
-      <th className={th}>Publicacion</th><th className={th}>Embarque</th>
-      <th className={th}>Destino</th><th className={th}>Temp.</th>
     </tr></thead>
     <tbody>
-      {rows.map((r) => {
+      {rows.map((r, idx) => {
         const sel = selectedOrder === r.order_id;
         const isOverdue = r.due_date && new Date(r.due_date) < new Date();
         const lastWip = lastWipByOrder[r.order_id];
         return (
           <tr key={r.order_id} onClick={() => onSelect(r.order_id)}
-            className={`cursor-pointer transition-colors ${sel ? "bg-red-50/60" : "hover:bg-gray-50/60 even:bg-gray-50/30"}`}>
+            className={`cursor-pointer transition-colors ${sel ? "bg-red-50/60" : idx % 2 === 0 ? "hover:bg-gray-50/80 bg-white" : "hover:bg-gray-100/60 bg-gray-50/50"}`}>
             <td className={td}>
-              <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[11px] font-bold transition-colors ${sel ? "bg-[#821417] text-white" : "bg-gray-100 text-gray-400"}`}>
-                {sel ? "−" : "+"}
+              <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[11px] transition-colors ${sel ? "bg-[#991b1b] text-white" : "text-gray-400"}`}>
+                {sel ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg> : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>}
               </span>
             </td>
             <td className={td}><StatusBadge status={r.status} /></td>
-            <td className={`${td} font-mono text-xs font-bold text-[#821417]`}>{r.order_id}</td>
+            <td className={`${td} font-mono text-xs font-bold text-[#991b1b]`}>{r.order_id}</td>
             <td className={`${td} max-w-[180px] truncate`}>{r.po_customer_name?.trim()}</td>
             <td className={`${td} max-w-[140px] truncate`}>{r.pol_garment_class_description?.trim()}</td>
-            <td className={`${td} text-gray-400 text-xs max-w-[120px] truncate`}>{r.pol_garment_class_group_description?.trim()}</td>
             <td className={`${td} font-mono text-xs`}>{r.pol_customer_style_id?.trim()}</td>
-            <td className={`${td} font-mono text-xs`}>{r.pols_factory_style_id?.trim()}</td>
             <td className={td}><StyleBadge type={r.style_type} /></td>
             <td className={td}>
               {r.status === "IN" && lastWip ? (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ring-1 bg-emerald-50 text-emerald-700 ring-emerald-200">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] font-medium ring-1 bg-emerald-50 text-emerald-700 ring-emerald-200">
                   {lastWip} {PROCESS_NAMES[lastWip] ? `- ${PROCESS_NAMES[lastWip]}` : ""}
                 </span>
-              ) : <span className="text-gray-300">—</span>}
+              ) : <span className="text-gray-300">&mdash;</span>}
             </td>
             <td className={`${td} text-right tabular-nums`}>{fmtPrice(r.pol_unit_price)}</td>
             <td className={`${td} text-right tabular-nums font-medium`}>{fmtNum(r.pol_requested_q)}</td>
             <td className={`${td} text-right tabular-nums`}>{fmtUSD(r.pol_amount_usd)}</td>
             <td className={`${td} text-right tabular-nums`}>
-              {(() => { const c = getCostoCotiz(r.cotizador); return c != null ? <span className="text-[#821417] font-medium">${c.toFixed(2)}</span> : <span className="text-gray-300">—</span>; })()}
+              {(() => { const c = getCostoCotiz(r.cotizador); return c != null ? <span className="text-[#991b1b] font-medium">${c.toFixed(2)}</span> : <span className="text-gray-300">&mdash;</span>; })()}
             </td>
             <td className={`${td} text-right tabular-nums`}>
-              {(() => { const p = getPrecioCotiz(r.cotizador, r.po_customer_name); return p != null ? <span className="text-emerald-700 font-medium">${p.toFixed(2)}</span> : <span className="text-gray-300">—</span>; })()}
+              {(() => { const p = getPrecioCotiz(r.cotizador, r.po_customer_name); return p != null ? <span className="text-emerald-700 font-medium">${p.toFixed(2)}</span> : <span className="text-gray-300">&mdash;</span>; })()}
             </td>
             <td className={`${td} text-right tabular-nums`}>
-              {(() => { const c = getCostoCotiz(r.cotizador); const q = Number(r.pol_requested_q); return c != null ? <span className="text-[#821417] font-medium">{fmtUSD(c * q)}</span> : <span className="text-gray-300">—</span>; })()}
+              {(() => { const c = getCostoCotiz(r.cotizador); const q = Number(r.pol_requested_q); return c != null ? <span className="text-[#991b1b] font-medium">{fmtUSD(c * q)}</span> : <span className="text-gray-300">&mdash;</span>; })()}
             </td>
             <td className={`${td} ${isOverdue ? "text-red-500 font-medium" : "text-gray-500"}`}>{fmtDate(r.due_date)}{isOverdue ? " !" : ""}</td>
-            <td className={`${td} text-gray-400`}>{fmtDate(r.po_published_t)}</td>
-            <td className={`${td} text-gray-400 text-xs`}>{r.po_shipment_type?.trim()}</td>
-            <td className={`${td} text-gray-400 text-xs`}>{r.pol_destination?.trim()}</td>
-            <td className={`${td} text-gray-400 text-xs`}>{r.po_season_year} {r.po_season_id?.trim()}</td>
           </tr>
         );
       })}
@@ -1121,14 +963,14 @@ function DetailPanel({ orderId, z1, z2, z2Loading, opData }: { orderId: string; 
   ];
 
   return (
-    <div className="mt-3 bg-white rounded-xl border border-[#bd4c42]/15 shadow-[0_2px_8px_rgba(130,20,23,0.06)] overflow-hidden animate-[fadeIn_0.2s_ease]">
-      <div className="px-4 py-2.5 bg-gradient-to-r from-red-50 to-orange-50/30 border-b border-[#bd4c42]/10 flex items-center justify-between">
+    <div className="mt-3 bg-white rounded-xl border border-slate-200 shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden animate-[fadeIn_0.2s_ease]">
+      <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-bold text-[#821417]">OP {orderId}</span>
+          <span className="text-sm font-bold text-[#991b1b]">OP {orderId}</span>
           <div className="flex gap-0.5 bg-white rounded-lg p-0.5 border border-gray-200">
             {tabs.map(([k, lbl]) => (
               <button key={k} onClick={() => setDtab(k)}
-                className={`px-3 py-1 rounded-md text-[11px] font-medium transition-all ${dtab === k ? "bg-[#821417] text-white" : "text-gray-500 hover:bg-gray-50"}`}>{lbl}</button>
+                className={`px-3 py-1 rounded-md text-[11px] font-medium transition-all ${dtab === k ? "bg-[#991b1b] text-white" : "text-gray-500 hover:bg-gray-50"}`}>{lbl}</button>
             ))}
           </div>
         </div>
@@ -1150,7 +992,7 @@ function DetailPanel({ orderId, z1, z2, z2Loading, opData }: { orderId: string; 
               </tr></thead>
               <tbody>
                 {z1.map((r, i) => (
-                  <tr key={i} className="hover:bg-gray-50/60 even:bg-gray-50/30">
+                  <tr key={i} className={`hover:bg-gray-50/60 ${i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}>
                     <td className={`${td} font-mono text-xs font-bold`}>{r.process_id}</td>
                     <td className={td}>{PROCESS_NAMES[r.process_id] || r.process_id}</td>
                     <td className={td}><StatusBadge status={r.status} /></td>
@@ -1166,7 +1008,7 @@ function DetailPanel({ orderId, z1, z2, z2Loading, opData }: { orderId: string; 
         ) : dtab === "mat" ? (
           z2Loading ? (
             <div className="flex items-center justify-center py-10">
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#821417] border-t-transparent" /><span className="ml-3 text-sm text-gray-400">Cargando...</span>
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#991b1b] border-t-transparent" /><span className="ml-3 text-sm text-gray-400">Cargando...</span>
             </div>
           ) : z2.length === 0 ? <Empty msg="Sin materiales" /> : (
             <table className="w-full">
@@ -1176,7 +1018,7 @@ function DetailPanel({ orderId, z1, z2, z2Loading, opData }: { orderId: string; 
               </tr></thead>
               <tbody>
                 {z2.map((r, i) => (
-                  <tr key={i} className="hover:bg-gray-50/60 even:bg-gray-50/30">
+                  <tr key={i} className={`hover:bg-gray-50/60 ${i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}>
                     <td className={td}><CatBadge cat={r.sku_category_id} /></td>
                     <td className={`${td} font-mono text-xs`}>{r.sku_catalog_id}</td>
                     <td className={`${td} font-mono text-xs font-bold`}>{r.sku_id}</td>
@@ -1250,7 +1092,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
   };
 
   // Column highlight class
-  const colCls = (rid: string) => rid === rangoActual ? "bg-[#821417]/5" : "";
+  const colCls = (rid: string) => rid === rangoActual ? "bg-[#991b1b]/5" : "";
   const colClsGreen = (rid: string) => rid === rangoActual ? "bg-emerald-100/60" : "";
 
   return (
@@ -1260,14 +1102,14 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
         <div className="flex items-center gap-2">
           {cot.metodo && (() => {
             const cfg = {
-              recurrente:  { color: "bg-blue-50 text-blue-700 ring-blue-200",   label: "Recurrente",         msg: "Referencia: OPs históricas del mismo estilo de cliente" },
-              nuevo:       { color: "bg-orange-50 text-orange-700 ring-orange-200", label: "Nuevo",           msg: "Referencia: OPs históricas del mismo cliente y tipo de prenda" },
-              nuevo_tipo:  { color: "bg-amber-50 text-amber-600 ring-amber-200",  label: "Nuevo ⚠ Aprox.",   msg: "Cliente sin historial propio — referencia: toda TdV para este tipo de prenda" },
+              recurrente:  { color: "bg-blue-50 text-blue-700 ring-blue-200",   label: "Recurrente",         msg: "Referencia: OPs historicas del mismo estilo de cliente" },
+              nuevo:       { color: "bg-orange-50 text-orange-700 ring-orange-200", label: "Nuevo",           msg: "Referencia: OPs historicas del mismo cliente y tipo de prenda" },
+              nuevo_tipo:  { color: "bg-amber-50 text-amber-600 ring-amber-200",  label: "Nuevo (Aprox.)",   msg: "Cliente sin historial propio — referencia: toda TdV para este tipo de prenda" },
             }[cot.metodo] ?? { color: "bg-gray-50 text-gray-500 ring-gray-200", label: cot.metodo, msg: "" };
             return (
               <div className="flex flex-col gap-0.5">
                 <span className={`self-start px-2.5 py-0.5 rounded-full text-[11px] font-medium ring-1 ${cfg.color}`}>{cfg.label}</span>
-                {cfg.msg && <span className="text-[10px] text-gray-400 pl-0.5">{cfg.msg}</span>}
+                {cfg.msg && <span className="text-[11px] text-gray-400 pl-0.5">{cfg.msg}</span>}
               </div>
             );
           })()}
@@ -1302,9 +1144,9 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                 const isActual = rid === rangoActual;
                 return (
                   <th key={rid} className={`${th} text-right ${colCls(rid)}`}>
-                    <span className={isActual ? "text-[#821417] font-bold" : ""}>{r.name}</span>
-                    {isActual && <span className="ml-1 text-[9px] text-[#821417]">*</span>}
-                    <div className="text-[10px] font-normal text-gray-400">{r.ops} OPs</div>
+                    <span className={isActual ? "text-[#991b1b] font-bold" : ""}>{r.name}</span>
+                    {isActual && <span className="ml-1 text-[9px] text-[#991b1b]">*</span>}
+                    <div className="text-[11px] font-normal text-gray-400">{r.ops} OPs</div>
                   </th>
                 );
               })}
@@ -1313,10 +1155,10 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
           <tbody>
             {/* ── SECTION: WIPs ── */}
             <tr className="bg-gray-50">
-              <td colSpan={5 + availRangos.length} className="px-3 py-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200">
+              <td colSpan={5 + availRangos.length} className="px-3 py-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <span>WIPs de Proceso</span>
-                  <button onClick={() => setShowAllWips(v => !v)} className="text-[10px] font-medium text-[#821417] hover:underline">
+                  <button onClick={() => setShowAllWips(v => !v)} className="text-[11px] font-medium text-[#991b1b] hover:underline">
                     {showAllWips ? `Mostrar solo OP (${checkedCount})` : `Mostrar todos (${allWips.length})`}
                   </button>
                 </div>
@@ -1330,19 +1172,19 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                 <tr key={w} className={`${checked ? "" : "opacity-35"} hover:bg-gray-50/60 even:bg-gray-50/30`}>
                   <td className={`${td} text-center`}>
                     {checked
-                      ? <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-emerald-100 text-emerald-600 text-[10px] font-bold">&#10003;</span>
-                      : <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-gray-100 text-gray-400 text-[10px]">&#8212;</span>}
+                      ? <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-emerald-100 text-emerald-600 text-[11px] font-bold">&#10003;</span>
+                      : <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-gray-100 text-gray-400 text-[11px]">&#8212;</span>}
                   </td>
                   <td className={`${td} font-mono text-xs font-bold`}>{w}</td>
                   <td className={`${td} text-xs`}>{PROCESS_NAMES[w] || w}</td>
                   <td className={td}>
-                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ring-1 ${
+                    <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium ring-1 ${
                       isTextil ? "bg-blue-50 text-blue-600 ring-blue-200" : "bg-amber-50 text-amber-600 ring-amber-200"
                     }`}>{isTextil ? "Textil" : "Manuf."}</span>
                   </td>
                   <td className={td}>
                     {checked && (
-                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ring-1 ${
+                      <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium ring-1 ${
                         isReal ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-gray-50 text-gray-500 ring-gray-200"
                       }`}>{isReal ? "Real" : "Cotizado"}</span>
                     )}
@@ -1361,7 +1203,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                       <td key={rid} className={`${td} text-right tabular-nums ${colCls(rid)} ${isActual && checked ? "font-semibold" : ""}`}>
                         {!hasData ? <span className="text-gray-300">---</span>
                           : cost === 0 ? <span className="text-gray-300">$0.00</span>
-                          : <span className={isActual ? (isReal ? "text-emerald-700" : "text-[#821417]") : ""}>${cost.toFixed(2)}</span>}
+                          : <span className={isActual ? (isReal ? "text-emerald-700" : "text-[#991b1b]") : ""}>${cost.toFixed(2)}</span>}
                       </td>
                     );
                   })}
@@ -1393,7 +1235,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                 }
                 return (
                   <td key={rid} className={`${td} text-right tabular-nums ${colCls(rid)}`}>
-                    <span className={isActual ? "text-[#821417] font-bold" : ""}>${subtotal.toFixed(2)}</span>
+                    <span className={isActual ? "text-[#991b1b] font-bold" : ""}>${subtotal.toFixed(2)}</span>
                   </td>
                 );
               })}
@@ -1401,7 +1243,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
 
             {/* ── SECTION: Materiales ── */}
             <tr className="bg-gray-50">
-              <td colSpan={5 + availRangos.length} className="px-3 py-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200 border-t border-t-gray-200">
+              <td colSpan={5 + availRangos.length} className="px-3 py-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200 border-t border-t-gray-200">
                 Materiales
               </td>
             </tr>
@@ -1417,10 +1259,10 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                   <td className={td}></td>
                   <td className={`${td} text-xs`}>{row.label}</td>
                   <td className={td}>
-                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ring-1 ${row.icon}`}>{row.tipo}</span>
+                    <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium ring-1 ${row.icon}`}>{row.tipo}</span>
                   </td>
                   <td className={td}>
-                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ring-1 ${isRealMat ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-gray-50 text-gray-500 ring-gray-200"}`}>
+                    <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium ring-1 ${isRealMat ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-gray-50 text-gray-500 ring-gray-200"}`}>
                       {isRealMat ? "Real" : "Cotizado"}
                     </span>
                   </td>
@@ -1431,7 +1273,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                     return (
                       <td key={rid} className={`${td} text-right tabular-nums ${colCls(rid)}`}>
                         {val > 0
-                          ? <span className={isActual ? (isRealMat ? "text-emerald-700 font-semibold" : "text-[#821417] font-semibold") : ""}>${val.toFixed(2)}</span>
+                          ? <span className={isActual ? (isRealMat ? "text-emerald-700 font-semibold" : "text-[#991b1b] font-semibold") : ""}>${val.toFixed(2)}</span>
                           : <span className="text-gray-300">---</span>}
                       </td>
                     );
@@ -1455,7 +1297,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                 const val = realMp + realAvios;
                 return (
                   <td key={rid} className={`${td} text-right tabular-nums ${colCls(rid)}`}>
-                    <span className={isActual ? "text-[#821417] font-bold" : ""}>{val > 0 ? `$${val.toFixed(2)}` : "---"}</span>
+                    <span className={isActual ? "text-[#991b1b] font-bold" : ""}>{val > 0 ? `$${val.toFixed(2)}` : "---"}</span>
                   </td>
                 );
               })}
@@ -1463,7 +1305,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
 
             {/* ── SECTION: Gastos ── */}
             <tr className="bg-gray-50">
-              <td colSpan={5 + availRangos.length} className="px-3 py-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200 border-t border-t-gray-200">
+              <td colSpan={5 + availRangos.length} className="px-3 py-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200 border-t border-t-gray-200">
                 Gastos Indirectos
               </td>
             </tr>
@@ -1477,10 +1319,10 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                 <td className={td}></td>
                 <td className={`${td} text-xs`}>{row.label}</td>
                 <td className={td}>
-                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ring-1 ${row.icon}`}>{row.tipo}</span>
+                  <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium ring-1 ${row.icon}`}>{row.tipo}</span>
                 </td>
                 <td className={td}>
-                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium ring-1 bg-gray-50 text-gray-500 ring-gray-200">Cotizado</span>
+                  <span className="px-1.5 py-0.5 rounded-full text-[11px] font-medium ring-1 bg-gray-50 text-gray-500 ring-gray-200">Cotizado</span>
                 </td>
                 {availRangos.map(rid => {
                   const r = cot.rangos[rid]!;
@@ -1488,7 +1330,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                   const val = r.gastos?.[row.key] ?? 0;
                   return (
                     <td key={rid} className={`${td} text-right tabular-nums ${colCls(rid)}`}>
-                      {val > 0 ? <span className={isActual ? "text-[#821417] font-semibold" : ""}>${val.toFixed(2)}</span> : <span className="text-gray-300">---</span>}
+                      {val > 0 ? <span className={isActual ? "text-[#991b1b] font-semibold" : ""}>${val.toFixed(2)}</span> : <span className="text-gray-300">---</span>}
                     </td>
                   );
                 })}
@@ -1508,7 +1350,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                 const val = (r.gastos?.cif ?? 0) + (r.gastos?.ga ?? 0) + (r.gastos?.gv ?? 0);
                 return (
                   <td key={rid} className={`${td} text-right tabular-nums ${colCls(rid)}`}>
-                    <span className={isActual ? "text-[#821417] font-bold" : ""}>{val > 0 ? `$${val.toFixed(2)}` : "---"}</span>
+                    <span className={isActual ? "text-[#991b1b] font-bold" : ""}>{val > 0 ? `$${val.toFixed(2)}` : "---"}</span>
                   </td>
                 );
               })}
@@ -1527,7 +1369,7 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
                 const t = getTotal(r);
                 return (
                   <td key={rid} className={`${td} text-right tabular-nums ${colCls(rid)}`}>
-                    <span className={`font-bold ${isActual ? "text-[#821417]" : ""}`}>${t.toFixed(2)}</span>
+                    <span className={`font-bold ${isActual ? "text-[#991b1b]" : ""}`}>${t.toFixed(2)}</span>
                   </td>
                 );
               })}
@@ -1537,10 +1379,10 @@ function CotizadorPanel({ cot, cliente }: { cot: Cotizador; cliente: string }) {
               <td className={td}></td>
               <td className={`${td} text-xs`}>
                 PRECIO COTIZADOR
-                <span className="ml-1.5 font-normal text-[10px] text-gray-400">(+{margenPct.toFixed(1)}%)</span>
+                <span className="ml-1.5 font-normal text-[11px] text-gray-400">(+{margenPct.toFixed(1)}%)</span>
               </td>
               <td className={td}>
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium ring-1 bg-emerald-50 text-emerald-600 ring-emerald-200">Precio</span>
+                <span className="px-1.5 py-0.5 rounded-full text-[11px] font-medium ring-1 bg-emerald-50 text-emerald-600 ring-emerald-200">Precio</span>
               </td>
               <td className={td}></td>
               {availRangos.map(rid => {
