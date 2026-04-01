@@ -190,6 +190,7 @@ export default function Home() {
   const [customerFilter, setCustomerFilter] = useState("ALL");
   const [styleTypeFilter, setStyleTypeFilter] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
+  const [marginFilter, setMarginFilter] = useState<"ALL" | "saludable" | "atencion" | "critico">("ALL");
 
   // Sorting
   const [sortCol, setSortCol] = useState<string>("order_id");
@@ -224,12 +225,23 @@ export default function Home() {
     if (sortCol !== col) setSortCol(col);
   }, [sortCol]);
 
+  // Helper: classify margin
+  const getMarginClass = useCallback((r: Z0Row): "saludable" | "atencion" | "critico" | "sin_dato" => {
+    const costo = getCostoCotiz(r.cotizador);
+    if (costo == null || !r.pol_unit_price || r.pol_unit_price <= 0) return "sin_dato";
+    const margen = (r.pol_unit_price - costo) / r.pol_unit_price * 100;
+    if (margen >= 10) return "saludable";
+    if (margen >= 0) return "atencion";
+    return "critico";
+  }, []);
+
   const filtered = useMemo(() => {
     const f = z0Data.filter((r) => {
       if (statusFilter === "ALL") { if (r.status !== "NI" && r.status !== "IN" && r.status !== "PO") return false; }
       else if (r.status !== statusFilter) return false;
       if (customerFilter !== "ALL" && r.po_customer_name?.trim() !== customerFilter) return false;
       if (styleTypeFilter !== "ALL" && r.style_type !== styleTypeFilter) return false;
+      if (marginFilter !== "ALL" && getMarginClass(r) !== marginFilter) return false;
       if (searchTerm) {
         const s = searchTerm.toLowerCase();
         const hay = [r.order_id, r.po_customer_name, r.pol_customer_style_id, r.pols_factory_style_id].filter(Boolean).join(" ").toLowerCase();
@@ -250,13 +262,13 @@ export default function Home() {
       return String(va ?? "").localeCompare(String(vb ?? ""), "es", { numeric: true }) * dir;
     });
     return f;
-  }, [z0Data, statusFilter, customerFilter, styleTypeFilter, searchTerm, sortCol, sortDir]);
+  }, [z0Data, statusFilter, customerFilter, styleTypeFilter, marginFilter, searchTerm, sortCol, sortDir, getMarginClass]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = useMemo(() => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filtered, page]);
 
   // Reset page + selection on filter change
-  useEffect(() => { setPage(1); setSelectedOrder(null); }, [statusFilter, customerFilter, styleTypeFilter, searchTerm]);
+  useEffect(() => { setPage(1); setSelectedOrder(null); }, [statusFilter, customerFilter, styleTypeFilter, marginFilter, searchTerm]);
 
   const z1ForOrder = useMemo(() => {
     if (!selectedOrder) return [];
@@ -273,6 +285,30 @@ export default function Home() {
     }
     return m;
   }, [z1Data]);
+
+  // Margin counts — based on pre-margin-filtered data so counts stay stable
+  const marginCounts = useMemo(() => {
+    const base = z0Data.filter((r) => {
+      if (statusFilter === "ALL") { if (r.status !== "NI" && r.status !== "IN" && r.status !== "PO") return false; }
+      else if (r.status !== statusFilter) return false;
+      if (customerFilter !== "ALL" && r.po_customer_name?.trim() !== customerFilter) return false;
+      if (styleTypeFilter !== "ALL" && r.style_type !== styleTypeFilter) return false;
+      if (searchTerm) {
+        const s = searchTerm.toLowerCase();
+        const hay = [r.order_id, r.po_customer_name, r.pol_customer_style_id, r.pols_factory_style_id].filter(Boolean).join(" ").toLowerCase();
+        if (!hay.includes(s)) return false;
+      }
+      return true;
+    });
+    let saludable = 0, atencion = 0, critico = 0;
+    for (const r of base) {
+      const cls = getMarginClass(r);
+      if (cls === "saludable") saludable++;
+      else if (cls === "atencion") atencion++;
+      else if (cls === "critico") critico++;
+    }
+    return { saludable, atencion, critico };
+  }, [z0Data, statusFilter, customerFilter, styleTypeFilter, searchTerm, getMarginClass]);
 
   const summary = useMemo(() => {
     const ni = filtered.filter((r) => r.status === "NI").length;
@@ -396,11 +432,39 @@ export default function Home() {
               </div>
               <FSelect label="Cliente" value={customerFilter} options={customers} onChange={setCustomerFilter} />
               <FSelect label="Tipo" value={styleTypeFilter} options={["nuevo", "recurrente"]} onChange={setStyleTypeFilter} />
-              <button onClick={() => { setStatusFilter("ALL"); setCustomerFilter("ALL"); setStyleTypeFilter("ALL"); setSearchTerm(""); }}
+              <button onClick={() => { setStatusFilter("ALL"); setCustomerFilter("ALL"); setStyleTypeFilter("ALL"); setMarginFilter("ALL"); setSearchTerm(""); }}
                 className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">Limpiar</button>
             </div>
           </div>
         </div>
+
+        {/* Margin Classification Bar */}
+        {!loading && !error && (marginCounts.saludable > 0 || marginCounts.atencion > 0 || marginCounts.critico > 0) && (
+          <div className="mb-5">
+            <div className="bg-red-50/30 rounded-xl border border-red-100/50 p-4">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Criterio de clasificación — Margen sobre costo cotizado</p>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { key: "saludable" as const, count: marginCounts.saludable, label: "Saludable", sub: "Margen ≥ 10% — la orden tiene rentabilidad sólida", bg: marginFilter === "saludable" ? "bg-green-600" : "bg-green-500", cardBg: marginFilter === "saludable" ? "bg-green-50 border-green-300 shadow-md" : "bg-green-50/40 border-green-100 hover:border-green-300", textColor: "text-green-800" },
+                  { key: "atencion" as const, count: marginCounts.atencion, label: "Atención", sub: "Margen entre 0% y 9.9% — rentabilidad baja o al límite", bg: marginFilter === "atencion" ? "bg-amber-600" : "bg-amber-500", cardBg: marginFilter === "atencion" ? "bg-amber-50 border-amber-300 shadow-md" : "bg-amber-50/40 border-amber-100 hover:border-amber-300", textColor: "text-amber-800" },
+                  { key: "critico" as const, count: marginCounts.critico, label: "Crítico", sub: "Margen negativo (< 0%) — el costo supera al precio, genera pérdida", bg: marginFilter === "critico" ? "bg-red-700" : "bg-red-600", cardBg: marginFilter === "critico" ? "bg-red-50 border-red-300 shadow-md" : "bg-red-50/40 border-red-100 hover:border-red-300", textColor: "text-red-800" },
+                ].map(item => (
+                  <button key={item.key}
+                    onClick={() => setMarginFilter(prev => prev === item.key ? "ALL" : item.key)}
+                    className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all cursor-pointer text-left ${item.cardBg}`}>
+                    <div className={`w-11 h-11 rounded-full ${item.bg} text-white flex items-center justify-center text-lg font-bold shrink-0 transition-colors`}>
+                      {item.count}
+                    </div>
+                    <div>
+                      <p className={`text-sm font-bold ${item.textColor}`}>{item.label}</p>
+                      <p className="text-[10px] text-gray-500 leading-tight mt-0.5">{item.sub}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Analytics */}
         {!loading && !error && <AnalyticsSection data={filtered} onSelectOp={loadMaterials} selectedOrder={selectedOrder} />}
