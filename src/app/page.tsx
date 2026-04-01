@@ -450,7 +450,7 @@ export default function Home() {
               </p>
             </div>
             <TableCard count={filtered.length} page={page} totalPages={totalPages} onPage={setPage}>
-              <Z0Table rows={paged as Z0Row[]} selectedOrder={selectedOrder} onSelect={loadMaterials} sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} lastWipByOrder={lastWipByOrder} />
+              <Z0Table rows={(selectedOrder ? (paged as Z0Row[]).filter(r => r.order_id === selectedOrder) : paged as Z0Row[])} selectedOrder={selectedOrder} onSelect={loadMaterials} sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} lastWipByOrder={lastWipByOrder} />
             </TableCard>
             {selectedOrder && (() => {
               const opSel = z0Data.find(r => r.order_id === selectedOrder);

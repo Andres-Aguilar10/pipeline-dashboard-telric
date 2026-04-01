@@ -18,6 +18,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
+html {
+  overflow-y: scroll;
+}
+
 body {
   background: var(--tdv-bg);
   color: var(--tdv-text);
