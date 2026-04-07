@@ -332,7 +332,7 @@ export default function Home() {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-50 text-white" style={{ background: "linear-gradient(135deg, #821417 0%, #a32428 60%, #bd4c42 100%)", boxShadow: "0 4px 24px rgba(130,20,23,0.25)" }}>
-        <div className="max-w-[1700px] mx-auto px-6 py-3.5 flex items-center gap-4">
+        <div className="max-w-[1700px] mx-auto px-4 md:px-6 py-3.5 flex items-center gap-4">
           <div className="w-10 h-10 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-[11px] font-black tracking-tight shrink-0">TDV</div>
           <div>
             <h1 className="text-base font-bold tracking-tight leading-tight">Pipeline Dashboard</h1>
@@ -341,7 +341,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-[1700px] mx-auto px-6 py-5 flex-1">
+      <main className="max-w-[1700px] mx-auto px-4 md:px-6 py-5 flex-1 w-full">
         {/* Summary Cards */}
         {(() => {
           const cards = [
@@ -406,7 +406,7 @@ export default function Home() {
         {!loading && !error && (marginCounts.saludable > 0 || marginCounts.atencion > 0 || marginCounts.critico > 0) && (
           <div className="mb-5">
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">Clasificacion por margen</p>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {[
                 { key: "saludable" as const, count: marginCounts.saludable, label: "Saludable", sub: "Margen >= 10%", bg: marginFilter === "saludable" ? "bg-green-600" : "bg-green-500", cardBg: marginFilter === "saludable" ? "bg-green-50 border-green-300 shadow-md" : "bg-white border-gray-200 hover:border-green-300", textColor: "text-green-800" },
                 { key: "atencion" as const, count: marginCounts.atencion, label: "Atencion", sub: "Margen 0% - 9.9%", bg: marginFilter === "atencion" ? "bg-amber-600" : "bg-amber-500", cardBg: marginFilter === "atencion" ? "bg-amber-50 border-amber-300 shadow-md" : "bg-white border-gray-200 hover:border-amber-300", textColor: "text-amber-800" },
@@ -462,9 +462,9 @@ export default function Home() {
               const isLoss = ganancia != null && ganancia < 0;
               return (
                 <div className={`mt-3 rounded-xl border shadow-sm overflow-hidden ${isLoss ? "border-red-200 bg-red-50/40" : "border-emerald-200 bg-emerald-50/40"}`}>
-                  <div className="flex items-stretch gap-0 divide-x divide-gray-200/70">
-                    <div className={`w-1.5 shrink-0 ${isLoss ? "bg-red-400" : "bg-emerald-400"}`} />
-                    <div className="flex-1 px-5 py-4">
+                  <div className="flex flex-col md:flex-row md:items-stretch gap-0 md:divide-x divide-gray-200/70">
+                    <div className={`w-full h-1.5 md:w-1.5 md:h-auto shrink-0 ${isLoss ? "bg-red-400" : "bg-emerald-400"}`} />
+                    <div className="flex-1 px-4 md:px-5 py-4">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">OP seleccionada</span>
                         <button onClick={() => setSelectedOrder(null)} className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors ml-auto">&times; Cerrar</button>
@@ -478,13 +478,13 @@ export default function Home() {
                       </p>
                     </div>
                     {gap != null && (
-                      <div className="px-5 py-4 text-center min-w-[130px]">
+                      <div className="px-4 md:px-5 py-3 md:py-4 text-center md:min-w-[130px] border-t md:border-t-0 border-gray-200/70">
                         <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Gap / prenda</p>
                         <p className={`text-xl font-bold ${isLoss ? "text-red-600" : "text-emerald-600"}`}>{gap > 0 ? "+" : ""}{gap.toFixed(2)}</p>
                       </div>
                     )}
                     {ganancia != null && (
-                      <div className="px-5 py-4 text-center min-w-[160px]">
+                      <div className="px-4 md:px-5 py-3 md:py-4 text-center md:min-w-[160px] border-t md:border-t-0 border-gray-200/70">
                         <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">{isLoss ? "Perdida total" : "Ganancia total"}</p>
                         <p className={`text-xl font-bold ${isLoss ? "text-red-600" : "text-emerald-600"}`}>{ganancia > 0 ? "+" : ""}${Math.abs(ganancia).toLocaleString("es-PE", { maximumFractionDigits: 0 })}</p>
                       </div>
@@ -500,7 +500,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-white">
-        <div className="max-w-[1700px] mx-auto px-6 py-3 text-center">
+        <div className="max-w-[1700px] mx-auto px-4 md:px-6 py-3 text-center">
           <p className="text-[11px] text-gray-400">TDV Textil del Valle &middot; Pipeline Dashboard &middot; Datos actualizados al {new Date().toLocaleDateString("es-PE", { day: "2-digit", month: "long", year: "numeric" })}</p>
         </div>
       </footer>
@@ -646,7 +646,7 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
       <p className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Analisis de Rentabilidad</p>
 
       {/* Row 1: Rentabilidad por cliente + Scatter */}
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
           {/* Rentabilidad neta por cliente */}
           <div className={`${cardBase} bg-white border-gray-100`}>
             <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Rentabilidad neta por cliente</p>
@@ -712,7 +712,7 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
         </div>
 
       {/* Row 2: Cobertura + OPs por cliente (bar) + Avance WIPs */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Cobertura de cotizador por marca */}
         <div className={`${cardBase} bg-white border-gray-100`}>
           <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Cobertura de cotizador por marca</p>
