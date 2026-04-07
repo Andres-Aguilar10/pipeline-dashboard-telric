@@ -555,6 +555,14 @@ async function main() {
   const sinCotiz    = z0Out.filter(r => !r.cotizador).length;
   console.log(`z0: ${z0Out.length} → con cotizador: ${conCotiz} (rec=${conRec}, nuevo=${conNuevo}, nuevo_tipo=${conTipo}) | sin cotizador: ${sinCotiz}`);
 
+  // ─── 6b. Escribir cotizador.json (mapa order_id → cotizador) ───
+  const cotizadorMap = {};
+  for (const row of z0Out) {
+    if (row.cotizador) cotizadorMap[row.order_id] = row.cotizador;
+  }
+  fs.writeFileSync(path.join(outDir, "cotizador.json"), JSON.stringify(cotizadorMap));
+  console.log(`cotizador.json: ${Object.keys(cotizadorMap).length} entries`);
+
   // z1 no cambia
   fs.writeFileSync(path.join(outDir, "z1.json"), JSON.stringify(z1));
   console.log(`z1: ${z1.length} rows`);

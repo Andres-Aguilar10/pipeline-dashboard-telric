@@ -1,0 +1,41 @@
+name: Weekly Data Refresh
+
+on:
+  schedule:
+    # Cada lunes a las 6:00 AM UTC (1:00 AM Peru)
+    - cron: '0 6 * * 1'
+  workflow_dispatch: # Permite trigger manual desde GitHub
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate z0.json and z1.json
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_SSL_CERT: ${{ secrets.DB_SSL_CERT }}
+          DB_SSL_KEY: ${{ secrets.DB_SSL_KEY }}
+        run: node scripts/generate-data-new.mjs
+
+      - name: Commit and push updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/z0.json public/data/z1.json public/data/cotizador.json
+          git diff --staged --quiet || git commit -m "chore: refresh pipeline data $(date +%Y-%m-%d)"
+          git push

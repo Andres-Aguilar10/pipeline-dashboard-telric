@@ -197,11 +197,26 @@ export default function Home() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
+    const ts = Date.now();
     Promise.all([
-      fetch(`/data/z0.json?v=${Date.now()}`).then((r) => r.json()),
-      fetch(`/data/z1.json?v=${Date.now()}`).then((r) => r.json()),
+      fetch("/api/z0").then((r) => { if (!r.ok) throw new Error("api"); return r.json(); }).then((data) => ({ data, fromApi: true }))
+        .catch(() => fetch(`/data/z0.json?v=${ts}`).then((r) => r.json()).then((data) => ({ data, fromApi: false }))),
+      fetch("/api/z1").then((r) => { if (!r.ok) throw new Error("api"); return r.json(); })
+        .catch(() => fetch(`/data/z1.json?v=${ts}`).then((r) => r.json())),
+      fetch(`/data/cotizador.json?v=${ts}`).then((r) => r.json()).catch(() => ({})),
     ])
-      .then(([z0, z1]) => { setZ0Data(z0); setZ1Data(z1); })
+      .then(([z0Result, z1, cotizadorMap]) => {
+        const z0 = z0Result.data;
+        // API returns rows without cotizador — merge from static cotizador.json
+        // Fallback z0.json already has cotizador embedded, no merge needed
+        if (z0Result.fromApi) {
+          for (const row of z0) {
+            row.cotizador = cotizadorMap[row.order_id] || null;
+          }
+        }
+        setZ0Data(z0);
+        setZ1Data(z1);
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
