@@ -198,52 +198,11 @@ export default function Home() {
 
   useEffect(() => {
     const ts = Date.now();
-    const TIMEOUT = 4000; // 4s max para API, luego fallback a JSON estático
-
-    function fetchWithTimeout(url: string, ms: number) {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), ms);
-      return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(timer));
-    }
-
-    // Cargar JSON estático inmediato + API en paralelo
-    // El primero que responda gana, API tiene prioridad si llega a tiempo
-    async function loadZ0(): Promise<{ data: Z0Row[]; fromApi: boolean }> {
-      try {
-        const r = await fetchWithTimeout("/api/z0", TIMEOUT);
-        if (!r.ok) throw new Error("api");
-        return { data: await r.json(), fromApi: true };
-      } catch {
-        const r = await fetch(`/data/z0.json?v=${ts}`);
-        return { data: await r.json(), fromApi: false };
-      }
-    }
-
-    async function loadZ1() {
-      try {
-        const r = await fetchWithTimeout("/api/z1", TIMEOUT);
-        if (!r.ok) throw new Error("api");
-        return r.json();
-      } catch {
-        return fetch(`/data/z1.json?v=${ts}`).then((r) => r.json());
-      }
-    }
-
     Promise.all([
-      loadZ0(),
-      loadZ1(),
-      fetch(`/data/cotizador.json?v=${ts}`).then((r) => r.json()).catch(() => ({})),
+      fetch(`/data/z0.json?v=${ts}`).then((r) => r.json()),
+      fetch(`/data/z1.json?v=${ts}`).then((r) => r.json()),
     ])
-      .then(([z0Result, z1, cotizadorMap]) => {
-        const z0 = z0Result.data;
-        if (z0Result.fromApi) {
-          for (const row of z0) {
-            row.cotizador = cotizadorMap[row.order_id] || null;
-          }
-        }
-        setZ0Data(z0);
-        setZ1Data(z1);
-      })
+      .then(([z0, z1]) => { setZ0Data(z0); setZ1Data(z1); })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
