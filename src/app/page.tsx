@@ -327,7 +327,26 @@ export default function Home() {
     const today = new Date();
     const vencidas = filtered.filter((r) => r.due_date && new Date(r.due_date) < today).length;
     const avgQty = filtered.length > 0 ? Math.round(totalQty / filtered.length) : 0;
-    return { ni, inP, po, total: filtered.length, totalQty, totalUSD, conCotiz, sinCotiz, conPrecio, sinPrecio, vencidas, avgQty };
+
+    // Costo vs Ingreso por status (solo OPs con precio Y cotizador)
+    const calcCostoIngreso = (status: string) => {
+      let ingreso = 0, costo = 0, ops = 0;
+      for (const r of filtered) {
+        if (r.status !== status) continue;
+        const c = getCostoCotiz(r.cotizador);
+        const ing = Number(r.pol_amount_usd) || 0;
+        const qty = Number(r.pol_requested_q) || 0;
+        if (c == null || ing <= 0 || qty <= 0) continue;
+        ingreso += ing;
+        costo += c * qty;
+        ops++;
+      }
+      return { ingreso, costo, margen: ingreso - costo, ops };
+    };
+    const inCostoIng = calcCostoIngreso("IN");
+    const niCostoIng = calcCostoIngreso("NI");
+
+    return { ni, inP, po, total: filtered.length, totalQty, totalUSD, conCotiz, sinCotiz, conPrecio, sinPrecio, vencidas, avgQty, inCostoIng, niCostoIng };
   }, [filtered]);
 
   // suppress unused var warnings
@@ -370,6 +389,42 @@ export default function Home() {
             </div>
           );
         })()}
+
+        {/* Costo vs Ingreso por Status */}
+        {(summary.inCostoIng.ops > 0 || summary.niCostoIng.ops > 0) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
+            {[
+              { label: "En Produccion (IN)", data: summary.inCostoIng, color: "emerald" },
+              { label: "No Iniciadas (NI)", data: summary.niCostoIng, color: "amber" },
+            ].filter(g => g.data.ops > 0).map(g => (
+              <div key={g.label} className="bg-white rounded-xl border border-gray-100 px-5 py-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{g.label}</p>
+                  <span className="text-[11px] text-gray-400">{g.data.ops} OPs con precio y costo</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-[11px] text-gray-400 mb-1">Ingreso (precio venta)</p>
+                    <p className="text-lg font-bold text-slate-700">{fmtUSD(g.data.ingreso)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-gray-400 mb-1">Costo cotizado</p>
+                    <p className="text-lg font-bold text-[#821417]">{fmtUSD(g.data.costo)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-gray-400 mb-1">Margen estimado</p>
+                    <p className={`text-lg font-bold ${g.data.margen >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                      {g.data.margen >= 0 ? "+" : ""}{fmtUSD(g.data.margen)}
+                      <span className="text-[11px] font-normal text-gray-400 ml-1">
+                        ({g.data.ingreso > 0 ? (g.data.margen / g.data.ingreso * 100).toFixed(1) : 0}%)
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Status Tabs */}
         <div className="flex flex-wrap gap-2 mb-3">
