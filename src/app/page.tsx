@@ -229,8 +229,11 @@ export default function Home() {
   // Helper: classify margin
   const getMarginClass = useCallback((r: Z0Row): "saludable" | "atencion" | "critico" | "sin_dato" => {
     const costo = getCostoCotiz(r.cotizador);
-    if (costo == null || !r.pol_unit_price || r.pol_unit_price <= 0) return "sin_dato";
-    const margen = (r.pol_unit_price - costo) / r.pol_unit_price * 100;
+    const qty = Number(r.pol_requested_q) || 0;
+    const ingreso = Number(r.pol_amount_usd) || 0;
+    if (costo == null || ingreso <= 0 || qty <= 0) return "sin_dato";
+    const costoTotal = costo * qty;
+    const margen = (ingreso - costoTotal) / ingreso * 100;
     if (margen >= 10) return "saludable";
     if (margen >= 0) return "atencion";
     return "critico";
@@ -319,10 +322,12 @@ export default function Home() {
     const totalUSD = filtered.reduce((a, r) => a + (Number(r.pol_amount_usd) || 0), 0);
     const conCotiz = filtered.filter((r) => r.cotizador).length;
     const sinCotiz = filtered.length - conCotiz;
+    const conPrecio = filtered.filter((r) => Number(r.pol_amount_usd) > 0).length;
+    const sinPrecio = filtered.length - conPrecio;
     const today = new Date();
     const vencidas = filtered.filter((r) => r.due_date && new Date(r.due_date) < today).length;
     const avgQty = filtered.length > 0 ? Math.round(totalQty / filtered.length) : 0;
-    return { ni, inP, po, total: filtered.length, totalQty, totalUSD, conCotiz, sinCotiz, vencidas, avgQty };
+    return { ni, inP, po, total: filtered.length, totalQty, totalUSD, conCotiz, sinCotiz, conPrecio, sinPrecio, vencidas, avgQty };
   }, [filtered]);
 
   // suppress unused var warnings
@@ -347,12 +352,14 @@ export default function Home() {
           const cards = [
             { label: "Total Ordenes", value: fmtNum(summary.total), sub: `${fmtNum(summary.conCotiz)} con cotizador`, icon: "text-slate-500" },
             { label: "Prendas", value: fmtNum(summary.totalQty), sub: `${fmtNum(summary.avgQty)} prom. por OP`, icon: "text-slate-500" },
-            { label: "Monto USD (Precio x Cant.)", value: fmtUSD(summary.totalUSD), sub: summary.totalUSD > 0 ? `$${(summary.totalUSD / summary.total).toFixed(0)} prom. por OP` : "", icon: "text-slate-500" },
+            { label: "Monto USD", value: fmtUSD(summary.totalUSD), sub: summary.totalUSD > 0 ? `$${(summary.totalUSD / summary.total).toFixed(0)} prom. por OP` : "", icon: "text-slate-500" },
+            { label: "Con Precio", value: fmtNum(summary.conPrecio), sub: summary.total > 0 ? `${(summary.conPrecio / summary.total * 100).toFixed(0)}% del total` : "", icon: "text-emerald-500" },
+            { label: "Sin Precio", value: fmtNum(summary.sinPrecio), sub: summary.total > 0 ? `${(summary.sinPrecio / summary.total * 100).toFixed(0)}% del total` : "", icon: "text-red-500" },
             { label: "Sin Costo Estimado", value: fmtNum(summary.sinCotiz), sub: summary.total > 0 ? `${(summary.sinCotiz / summary.total * 100).toFixed(0)}% del total` : "", icon: "text-amber-500" },
             { label: "Fuera de Plazo", value: fmtNum(summary.vencidas), sub: summary.total > 0 ? `${(summary.vencidas / summary.total * 100).toFixed(0)}% del total` : "", icon: "text-red-500" },
           ];
           return (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-5">
               {cards.map((c) => (
                 <div key={c.label} className="bg-white rounded-xl border border-gray-100 px-4 py-3.5 shadow-sm">
                   <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5">{c.label}</p>
@@ -456,10 +463,12 @@ export default function Home() {
             {selectedOrder && (() => {
               const opSel = z0Data.find(r => r.order_id === selectedOrder);
               const costo = opSel ? getCostoCotiz(opSel.cotizador) : null;
-              const precio = opSel ? getPrecioCotiz(opSel.cotizador, opSel.po_customer_name) : null;
-              const gap = precio != null && opSel?.pol_unit_price ? opSel.pol_unit_price - costo! : null;
-              const ganancia = gap != null && opSel?.pol_requested_q ? gap * opSel.pol_requested_q : null;
+              const qty = Number(opSel?.pol_requested_q) || 0;
+              const ingreso = Number(opSel?.pol_amount_usd) || 0;
+              const costoTotal = costo != null && qty > 0 ? costo * qty : null;
+              const ganancia = costoTotal != null && ingreso > 0 ? ingreso - costoTotal : null;
               const isLoss = ganancia != null && ganancia < 0;
+              const gapPerUnit = costo != null && ingreso > 0 && qty > 0 ? (ingreso / qty) - costo : null;
               return (
                 <div className={`mt-3 rounded-xl border shadow-sm overflow-hidden ${isLoss ? "border-red-200 bg-red-50/40" : "border-emerald-200 bg-emerald-50/40"}`}>
                   <div className="flex flex-col md:flex-row md:items-stretch gap-0 md:divide-x divide-gray-200/70">
@@ -477,10 +486,10 @@ export default function Home() {
                         <span className="ml-2 text-[11px] font-medium text-gray-400">{opSel?.pol_garment_class_description?.trim()} &middot; {opSel?.status}</span>
                       </p>
                     </div>
-                    {gap != null && (
+                    {gapPerUnit != null && (
                       <div className="px-4 md:px-5 py-3 md:py-4 text-center md:min-w-[130px] border-t md:border-t-0 border-gray-200/70">
                         <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">Gap / prenda</p>
-                        <p className={`text-xl font-bold ${isLoss ? "text-red-600" : "text-emerald-600"}`}>{gap > 0 ? "+" : ""}{gap.toFixed(2)}</p>
+                        <p className={`text-xl font-bold ${isLoss ? "text-red-600" : "text-emerald-600"}`}>{gapPerUnit > 0 ? "+" : ""}{gapPerUnit.toFixed(2)}</p>
                       </div>
                     )}
                     {ganancia != null && (
@@ -539,14 +548,15 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
       const m = d.po_customer_name?.trim() || "N/A";
       marcaMap[m] = (marcaMap[m] || 0) + 1;
 
-      if (d.pol_unit_price > 0 && d.cotizador) {
+      const ingreso = Number(d.pol_amount_usd) || 0;
+      if (ingreso > 0 && d.cotizador) {
         const costo = getCostoCotiz(d.cotizador);
         if (costo != null) {
-          const precio = +Number(d.pol_unit_price).toFixed(2);
           const qty = +d.pol_requested_q || 0;
-          const gap = +(precio - costo).toFixed(2);
-          const impacto = +(gap * qty).toFixed(0);
-          scatterData.push({ x: precio, y: costo, z: Math.max(30, Math.sqrt(Math.abs(impacto)) * 2), impacto, op: d.order_id.trim(), marca: m, qty, gap, status: d.status });
+          const precioEfectivo = qty > 0 ? +(ingreso / qty).toFixed(2) : 0;
+          const gap = +(precioEfectivo - costo).toFixed(2);
+          const impacto = +(ingreso - costo * qty).toFixed(0);
+          scatterData.push({ x: precioEfectivo, y: costo, z: Math.max(30, Math.sqrt(Math.abs(impacto)) * 2), impacto, op: d.order_id.trim(), marca: m, qty, gap, status: d.status });
         }
       }
     }
