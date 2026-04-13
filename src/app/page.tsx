@@ -378,11 +378,11 @@ export default function Home() {
             { label: "Fuera de Plazo", value: fmtNum(summary.vencidas), sub: summary.total > 0 ? `${(summary.vencidas / summary.total * 100).toFixed(0)}% del total` : "", icon: "text-red-500" },
           ];
           return (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-5">
               {cards.map((c) => (
-                <div key={c.label} className="bg-white rounded-xl border border-gray-100 px-4 py-3.5 shadow-sm">
-                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5">{c.label}</p>
-                  <p className={`text-3xl font-extrabold leading-none ${c.icon}`}>{c.value}</p>
+                <div key={c.label} className="bg-white rounded-xl border border-gray-100 px-3 md:px-4 py-3 md:py-3.5 shadow-sm">
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5 leading-tight">{c.label}</p>
+                  <p className={`text-2xl md:text-3xl font-extrabold leading-none ${c.icon} break-words`}>{c.value}</p>
                   {c.sub && <p className="text-[11px] text-gray-400 mt-2 leading-tight">{c.sub}</p>}
                 </div>
               ))}
@@ -397,23 +397,23 @@ export default function Home() {
               { label: "En Produccion (IN)", data: summary.inCostoIng, color: "emerald" },
               { label: "No Iniciadas (NI)", data: summary.niCostoIng, color: "amber" },
             ].filter(g => g.data.ops > 0).map(g => (
-              <div key={g.label} className="bg-white rounded-xl border border-gray-100 px-5 py-4 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
+              <div key={g.label} className="bg-white rounded-xl border border-gray-100 px-4 md:px-5 py-4 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-3">
                   <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{g.label}</p>
                   <span className="text-[11px] text-gray-400">{g.data.ops} OPs con precio y costo</span>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   <div>
                     <p className="text-[11px] text-gray-400 mb-1">Ingreso (precio venta)</p>
-                    <p className="text-lg font-bold text-slate-700">{fmtUSD(g.data.ingreso)}</p>
+                    <p className="text-base md:text-lg font-bold text-slate-700 break-words">{fmtUSD(g.data.ingreso)}</p>
                   </div>
                   <div>
                     <p className="text-[11px] text-gray-400 mb-1">Costo cotizado</p>
-                    <p className="text-lg font-bold text-[#821417]">{fmtUSD(g.data.costo)}</p>
+                    <p className="text-base md:text-lg font-bold text-[#821417] break-words">{fmtUSD(g.data.costo)}</p>
                   </div>
                   <div>
                     <p className="text-[11px] text-gray-400 mb-1">Margen estimado</p>
-                    <p className={`text-lg font-bold ${g.data.margen >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                    <p className={`text-base md:text-lg font-bold break-words ${g.data.margen >= 0 ? "text-emerald-600" : "text-red-600"}`}>
                       {g.data.margen >= 0 ? "+" : ""}{fmtUSD(g.data.margen)}
                       <span className="text-[11px] font-normal text-gray-400 ml-1">
                         ({g.data.ingreso > 0 ? (g.data.margen / g.data.ingreso * 100).toFixed(1) : 0}%)
