@@ -262,6 +262,12 @@ export default function Home() {
       if (col === "costo_cotiz") { va = getCostoCotiz(a.cotizador) ?? -1; vb = getCostoCotiz(b.cotizador) ?? -1; }
       if (col === "precio_cotiz") { va = getPrecioCotiz(a.cotizador, a.po_customer_name) ?? -1; vb = getPrecioCotiz(b.cotizador, b.po_customer_name) ?? -1; }
       if (col === "costo_total") { const ca = getCostoCotiz(a.cotizador); const cb = getCostoCotiz(b.cotizador); va = ca != null ? ca * Number(a.pol_requested_q) : -1; vb = cb != null ? cb * Number(b.pol_requested_q) : -1; }
+      if (col === "margen") {
+        const ca = getCostoCotiz(a.cotizador); const cb = getCostoCotiz(b.cotizador);
+        const ia = Number(a.pol_amount_usd) || 0; const ib = Number(b.pol_amount_usd) || 0;
+        va = ca != null && ia > 0 ? ia - ca * Number(a.pol_requested_q) : -Infinity;
+        vb = cb != null && ib > 0 ? ib - cb * Number(b.pol_requested_q) : -Infinity;
+      }
       if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
       return String(va ?? "").localeCompare(String(vb ?? ""), "es", { numeric: true }) * dir;
     });
@@ -942,30 +948,50 @@ function SortTh({ col, label, sortCol, sortDir, onSort, right }: { col: string; 
 }
 
 /* ───── Z0 Table ───── */
+const thGroup = "px-3 py-1.5 text-center text-[10px] font-bold uppercase tracking-widest border-b border-gray-200 whitespace-nowrap";
+const borderL = "border-l border-gray-200";
+
 const Z0Table = memo(({ rows, selectedOrder, onSelect, sortCol, sortDir, onSort, lastWipByOrder }: { rows: Z0Row[]; selectedOrder: string | null; onSelect: (id: string) => void; sortCol: string; sortDir: string; onSort: (c: string) => void; lastWipByOrder: Record<string, string> }) => (
   <table className="w-full">
-    <thead><tr>
-      <th className={th} style={{width:28}}></th>
-      <SortTh col="status" label="Status" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
-      <SortTh col="order_id" label="OP" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
-      <SortTh col="po_customer_name" label="Cliente" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
-      <SortTh col="pol_garment_class_description" label="Prenda" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
-      <SortTh col="pol_customer_style_id" label="Est. Cliente" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
-      <SortTh col="style_type" label="Tipo" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
-      <th className={th}>WIP Actual</th>
-      <SortTh col="pol_unit_price" label="Precio" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
-      <SortTh col="pol_requested_q" label="Cant." sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
-      <SortTh col="pol_amount_usd" label="Monto USD" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
-      <SortTh col="costo_cotiz" label="Costo Cotiz." sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
-      <SortTh col="precio_cotiz" label="Precio Cotiz." sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
-      <SortTh col="costo_total" label="Costo Total" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
-      <SortTh col="due_date" label="Due Date" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
-    </tr></thead>
+    <thead>
+      {/* Fila 1: grupos */}
+      <tr>
+        <th className={`${thGroup} bg-red-50/50`} colSpan={8}></th>
+        <th className={`${thGroup} bg-slate-50 text-slate-500 ${borderL}`} colSpan={3}>Real</th>
+        <th className={`${thGroup} bg-red-50/30 text-[#821417] ${borderL}`} colSpan={3}>Cotizador</th>
+        <th className={`${thGroup} bg-white ${borderL}`} colSpan={2}>Margen</th>
+      </tr>
+      {/* Fila 2: columnas */}
+      <tr>
+        <th className={th} style={{width:28}}></th>
+        <SortTh col="status" label="Status" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+        <SortTh col="order_id" label="OP" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+        <SortTh col="po_customer_name" label="Cliente" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+        <SortTh col="pol_garment_class_description" label="Prenda" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+        <SortTh col="pol_customer_style_id" label="Est. Cliente" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+        <SortTh col="style_type" label="Tipo" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+        <th className={th}>WIP Actual</th>
+        <SortTh col="pol_requested_q" label="Cant." sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
+        <SortTh col="pol_unit_price" label="P. Cliente" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
+        <SortTh col="pol_amount_usd" label="Ingreso" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
+        <SortTh col="costo_cotiz" label="C. Unit." sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
+        <SortTh col="costo_total" label="Costo Total" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
+        <SortTh col="precio_cotiz" label="P. Sugerido" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
+        <SortTh col="margen" label="Margen" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
+        <SortTh col="due_date" label="Due Date" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
+      </tr>
+    </thead>
     <tbody>
       {rows.map((r, idx) => {
         const sel = selectedOrder === r.order_id;
         const isOverdue = r.due_date && new Date(r.due_date) < new Date();
         const lastWip = lastWipByOrder[r.order_id];
+        const costoUnit = getCostoCotiz(r.cotizador);
+        const qty = Number(r.pol_requested_q) || 0;
+        const ingreso = Number(r.pol_amount_usd) || 0;
+        const costoTotal = costoUnit != null ? costoUnit * qty : null;
+        const margen = costoTotal != null && ingreso > 0 ? ingreso - costoTotal : null;
+        const precioSug = getPrecioCotiz(r.cotizador, r.po_customer_name);
         return (
           <tr key={r.order_id} onClick={() => onSelect(r.order_id)}
             className={`cursor-pointer transition-colors ${sel ? "bg-red-50/60" : idx % 2 === 0 ? "hover:bg-gray-50/80 bg-white" : "hover:bg-gray-100/60 bg-gray-50/50"}`}>
@@ -987,17 +1013,27 @@ const Z0Table = memo(({ rows, selectedOrder, onSelect, sortCol, sortDir, onSort,
                 </span>
               ) : <span className="text-gray-300">&mdash;</span>}
             </td>
+            {/* ── REAL ── */}
+            <td className={`${td} text-right tabular-nums font-medium ${borderL}`}>{fmtNum(qty)}</td>
             <td className={`${td} text-right tabular-nums`}>{fmtPrice(r.pol_unit_price)}</td>
-            <td className={`${td} text-right tabular-nums font-medium`}>{fmtNum(r.pol_requested_q)}</td>
-            <td className={`${td} text-right tabular-nums`}>{fmtUSD(r.pol_amount_usd)}</td>
-            <td className={`${td} text-right tabular-nums`}>
-              {(() => { const c = getCostoCotiz(r.cotizador); return c != null ? <span className="text-[#821417] font-medium">${c.toFixed(2)}</span> : <span className="text-gray-300">&mdash;</span>; })()}
+            <td className={`${td} text-right tabular-nums`}>{fmtUSD(ingreso)}</td>
+            {/* ── COTIZADOR ── */}
+            <td className={`${td} text-right tabular-nums ${borderL}`}>
+              {costoUnit != null ? <span className="text-[#821417] font-medium">${costoUnit.toFixed(2)}</span> : <span className="text-gray-300">&mdash;</span>}
             </td>
             <td className={`${td} text-right tabular-nums`}>
-              {(() => { const p = getPrecioCotiz(r.cotizador, r.po_customer_name); return p != null ? <span className="text-emerald-700 font-medium">${p.toFixed(2)}</span> : <span className="text-gray-300">&mdash;</span>; })()}
+              {costoTotal != null ? <span className="text-[#821417] font-medium">{fmtUSD(costoTotal)}</span> : <span className="text-gray-300">&mdash;</span>}
             </td>
             <td className={`${td} text-right tabular-nums`}>
-              {(() => { const c = getCostoCotiz(r.cotizador); const q = Number(r.pol_requested_q); return c != null ? <span className="text-[#821417] font-medium">{fmtUSD(c * q)}</span> : <span className="text-gray-300">&mdash;</span>; })()}
+              {precioSug != null ? <span className="text-emerald-700 font-medium">${precioSug.toFixed(2)}</span> : <span className="text-gray-300">&mdash;</span>}
+            </td>
+            {/* ── MARGEN ── */}
+            <td className={`${td} text-right tabular-nums ${borderL}`}>
+              {margen != null ? (
+                <span className={`font-bold ${margen >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                  {margen >= 0 ? "+" : ""}{fmtUSD(margen)}
+                </span>
+              ) : <span className="text-gray-300">&mdash;</span>}
             </td>
             <td className={`${td} ${isOverdue ? "text-red-500 font-medium" : "text-gray-500"}`}>{fmtDate(r.due_date)}{isOverdue ? " !" : ""}</td>
           </tr>
