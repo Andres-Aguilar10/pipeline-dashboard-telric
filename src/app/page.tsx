@@ -191,6 +191,8 @@ export default function Home() {
   const [styleTypeFilter, setStyleTypeFilter] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
   const [marginFilter, setMarginFilter] = useState<"ALL" | "saludable" | "atencion" | "critico">("ALL");
+  const [prodMonthFilter, setProdMonthFilter] = useState("ALL");
+  const [dueMonthFilter, setDueMonthFilter] = useState("ALL");
 
   // Sorting
   const [sortCol, setSortCol] = useState<string>("order_id");
@@ -239,6 +241,42 @@ export default function Home() {
     return "critico";
   }, []);
 
+  // Map order_id → mes de inicio de producción (desde z1, MIN start_ts de WIPs productivos)
+  const PRODUCTIVE_WIPS = useMemo(() => new Set(["14", "16", "19a", "24", "34", "36", "37", "40", "43", "44", "45", "49"]), []);
+  const prodMonthByOrder = useMemo(() => {
+    const m: Record<string, string> = {};
+    const earliestByOrder: Record<string, Date> = {};
+    for (const r of z1Data) {
+      if (!PRODUCTIVE_WIPS.has(r.process_id)) continue;
+      if (!r.start_ts) continue;
+      const d = new Date(r.start_ts);
+      if (isNaN(d.getTime())) continue;
+      if (!earliestByOrder[r.order_id] || d < earliestByOrder[r.order_id]) {
+        earliestByOrder[r.order_id] = d;
+      }
+    }
+    for (const [oid, d] of Object.entries(earliestByOrder)) {
+      m[oid] = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    }
+    return m;
+  }, [z1Data, PRODUCTIVE_WIPS]);
+
+  // Map order_id → mes de due_date
+  const dueMonthByOrder = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const r of z0Data) {
+      if (!r.due_date) continue;
+      const d = new Date(r.due_date);
+      if (isNaN(d.getTime())) continue;
+      m[r.order_id] = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    }
+    return m;
+  }, [z0Data]);
+
+  // Listas únicas de meses para los dropdowns
+  const prodMonths = useMemo(() => [...new Set(Object.values(prodMonthByOrder))].sort().reverse(), [prodMonthByOrder]);
+  const dueMonths = useMemo(() => [...new Set(Object.values(dueMonthByOrder))].sort(), [dueMonthByOrder]);
+
   const filtered = useMemo(() => {
     const f = z0Data.filter((r) => {
       if (statusFilter === "ALL") { if (r.status !== "NI" && r.status !== "IN" && r.status !== "PO") return false; }
@@ -246,6 +284,8 @@ export default function Home() {
       if (customerFilter !== "ALL" && r.po_customer_name?.trim() !== customerFilter) return false;
       if (styleTypeFilter !== "ALL" && r.style_type !== styleTypeFilter) return false;
       if (marginFilter !== "ALL" && getMarginClass(r) !== marginFilter) return false;
+      if (prodMonthFilter !== "ALL" && prodMonthByOrder[r.order_id] !== prodMonthFilter) return false;
+      if (dueMonthFilter !== "ALL" && dueMonthByOrder[r.order_id] !== dueMonthFilter) return false;
       if (searchTerm) {
         const s = searchTerm.toLowerCase();
         const hay = [r.order_id, r.po_customer_name, r.pol_customer_style_id, r.pols_factory_style_id].filter(Boolean).join(" ").toLowerCase();
@@ -272,13 +312,13 @@ export default function Home() {
       return String(va ?? "").localeCompare(String(vb ?? ""), "es", { numeric: true }) * dir;
     });
     return f;
-  }, [z0Data, statusFilter, customerFilter, styleTypeFilter, marginFilter, searchTerm, sortCol, sortDir, getMarginClass]);
+  }, [z0Data, statusFilter, customerFilter, styleTypeFilter, marginFilter, prodMonthFilter, dueMonthFilter, prodMonthByOrder, dueMonthByOrder, searchTerm, sortCol, sortDir, getMarginClass]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = useMemo(() => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filtered, page]);
 
   // Reset page + selection on filter change
-  useEffect(() => { setPage(1); setSelectedOrder(null); }, [statusFilter, customerFilter, styleTypeFilter, marginFilter, searchTerm]);
+  useEffect(() => { setPage(1); setSelectedOrder(null); }, [statusFilter, customerFilter, styleTypeFilter, marginFilter, prodMonthFilter, dueMonthFilter, searchTerm]);
 
   const z1ForOrder = useMemo(() => {
     if (!selectedOrder) return [];
@@ -384,12 +424,12 @@ export default function Home() {
             { label: "Fuera de Plazo", value: fmtNum(summary.vencidas), sub: summary.total > 0 ? `${(summary.vencidas / summary.total * 100).toFixed(0)}% del total` : "", icon: "text-red-500" },
           ];
           return (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-5">
               {cards.map((c) => (
-                <div key={c.label} className="bg-white rounded-xl border border-gray-100 px-3 md:px-4 py-3 md:py-3.5 shadow-sm">
-                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-1.5 leading-tight">{c.label}</p>
-                  <p className={`text-2xl md:text-3xl font-extrabold leading-none ${c.icon} break-words`}>{c.value}</p>
-                  {c.sub && <p className="text-[11px] text-gray-400 mt-2 leading-tight">{c.sub}</p>}
+                <div key={c.label} className="bg-white rounded-lg border border-gray-100 px-3 py-2.5 shadow-sm flex flex-col justify-between min-h-[72px]">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider leading-tight">{c.label}</p>
+                  <p className={`text-xl md:text-2xl font-extrabold leading-none mt-1 ${c.icon} break-words`}>{c.value}</p>
+                  {c.sub && <p className="text-[10px] text-gray-400 mt-1 leading-tight truncate">{c.sub}</p>}
                 </div>
               ))}
             </div>
@@ -466,7 +506,9 @@ export default function Home() {
           </div>
           <FSelect label="Cliente" value={customerFilter} options={customers} onChange={setCustomerFilter} />
           <FSelect label="Tipo" value={styleTypeFilter} options={["nuevo", "recurrente"]} onChange={setStyleTypeFilter} />
-          <button onClick={() => { setStatusFilter("ALL"); setCustomerFilter("ALL"); setStyleTypeFilter("ALL"); setMarginFilter("ALL"); setSearchTerm(""); }}
+          <FSelect label="Mes Produccion" value={prodMonthFilter} options={prodMonths} onChange={setProdMonthFilter} />
+          <FSelect label="Mes Due Date" value={dueMonthFilter} options={dueMonths} onChange={setDueMonthFilter} />
+          <button onClick={() => { setStatusFilter("ALL"); setCustomerFilter("ALL"); setStyleTypeFilter("ALL"); setMarginFilter("ALL"); setProdMonthFilter("ALL"); setDueMonthFilter("ALL"); setSearchTerm(""); }}
             className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">Limpiar</button>
         </div>
 
