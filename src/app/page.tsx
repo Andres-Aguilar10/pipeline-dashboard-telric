@@ -33,6 +33,7 @@ interface Z0Row {
   pol_destination: string;
   po_season_year: string;
   po_season_id: string;
+  acabado_completed?: boolean;
   cotizador?: Cotizador | null;
 }
 
@@ -103,8 +104,10 @@ function getFactorMarca(cliente: string): number {
 const STATUS_COLORS: Record<string, { bg: string; ring: string; text: string }> = {
   NI: { bg: "bg-amber-500", ring: "ring-amber-300", text: "text-white" },
   IN: { bg: "bg-emerald-500", ring: "ring-emerald-300", text: "text-white" },
+  POST_ACABADO: { bg: "bg-blue-500", ring: "ring-blue-300", text: "text-white" },
   PO: { bg: "bg-[#821417]", ring: "ring-red-300", text: "text-white" },
 };
+const STATUS_LABELS: Record<string, string> = { NI: "NI", IN: "IN", POST_ACABADO: "ACABADO", PO: "PO" };
 
 /* ───── Helpers ───── */
 function fmtDate(d: string | null) {
@@ -127,7 +130,7 @@ function fmtPrice(n: number | null) {
 /* ───── Micro-components ───── */
 const StatusBadge = memo(({ status }: { status: string }) => {
   const s = STATUS_COLORS[status] || { bg: "bg-gray-400", ring: "ring-gray-200", text: "text-white" };
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide ${s.bg} ${s.text} ring-1 ${s.ring}`}>{status}</span>;
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide ${s.bg} ${s.text} ring-1 ${s.ring}`}>{STATUS_LABELS[status] || status}</span>;
 });
 StatusBadge.displayName = "StatusBadge";
 
@@ -172,6 +175,34 @@ function Pagination({ page, totalPages, onPage }: { page: number; totalPages: nu
   );
 }
 
+/* ───── Export CSV ───── */
+function exportToCSV(rows: Z0Row[], filename: string) {
+  const headers = ["OP","Status","Cliente","Prenda","Est. Cliente","Tipo","Cant.","P. Cliente","Ingreso USD","C. Unit. Cotiz","Costo Total","P. Sugerido","Margen Neto USD","Margen Neto %","Due Date"];
+  const csvRows = rows.map(r => {
+    const costo = getCostoCotiz(r.cotizador);
+    const qty = Number(r.pol_requested_q) || 0;
+    const ingreso = Number(r.pol_amount_usd) || 0;
+    const costoTotal = costo != null ? costo * qty : null;
+    const margenUSD = costoTotal != null && ingreso > 0 ? ingreso - costoTotal : null;
+    const margenPct = margenUSD != null && ingreso > 0 ? (margenUSD / ingreso * 100) : null;
+    const precio = getPrecioCotiz(r.cotizador, r.po_customer_name || "");
+    return [
+      r.order_id, STATUS_LABELS[r.status] || r.status, r.po_customer_name?.trim(), r.pol_garment_class_description?.trim(),
+      r.pol_customer_style_id?.trim(), r.style_type, qty, Number(r.pol_unit_price || 0).toFixed(2),
+      ingreso.toFixed(0), costo != null ? costo.toFixed(2) : "", costoTotal != null ? costoTotal.toFixed(0) : "",
+      precio != null ? precio.toFixed(2) : "", margenUSD != null ? margenUSD.toFixed(0) : "",
+      margenPct != null ? margenPct.toFixed(1) : "", r.due_date || "",
+    ].map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",");
+  });
+  const bom = "\uFEFF";
+  const csv = bom + headers.join(",") + "\n" + csvRows.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `${filename}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
 /* ───── Main ───── */
 export default function Home() {
   const [z0Data, setZ0Data] = useState<Z0Row[]>([]);
@@ -200,11 +231,24 @@ export default function Home() {
 
   useEffect(() => {
     const ts = Date.now();
+    // z0 y z1 en vivo desde API (incluye POST_ACABADO)
+    // cotizador estático (se pre-computa semanalmente)
     Promise.all([
-      fetch(`/data/z0.json?v=${ts}`).then((r) => r.json()),
-      fetch(`/data/z1.json?v=${ts}`).then((r) => r.json()),
+      fetch("/api/z0").then((r) => { if (!r.ok) throw new Error("api z0"); return r.json(); })
+        .catch(() => fetch(`/data/z0.json?v=${ts}`).then((r) => r.json())),
+      fetch("/api/z1").then((r) => { if (!r.ok) throw new Error("api z1"); return r.json(); })
+        .catch(() => fetch(`/data/z1.json?v=${ts}`).then((r) => r.json())),
+      fetch(`/data/cotizador.json?v=${ts}`).then((r) => r.json()).catch(() => ({})),
     ])
-      .then(([z0, z1]) => { setZ0Data(z0); setZ1Data(z1); })
+      .then(([z0, z1, cotizadorMap]) => {
+        // Merge cotizador en cada OP (si el dato viene del API no lo trae embebido)
+        const arr = Array.isArray(z0) ? z0 : [];
+        for (const row of arr) {
+          if (!row.cotizador) row.cotizador = cotizadorMap[row.order_id] || null;
+        }
+        setZ0Data(arr);
+        setZ1Data(Array.isArray(z1) ? z1 : []);
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -279,7 +323,8 @@ export default function Home() {
 
   const filtered = useMemo(() => {
     const f = z0Data.filter((r) => {
-      if (statusFilter === "ALL") { if (r.status !== "NI" && r.status !== "IN" && r.status !== "PO") return false; }
+      if (statusFilter === "ALL") { if (r.status !== "NI" && r.status !== "IN" && r.status !== "POST_ACABADO" && r.status !== "PO") return false; }
+      else if (statusFilter === "IN") { if (r.status !== "IN" && r.status !== "POST_ACABADO") return false; }
       else if (r.status !== statusFilter) return false;
       if (customerFilter !== "ALL" && r.po_customer_name?.trim() !== customerFilter) return false;
       if (styleTypeFilter !== "ALL" && r.style_type !== styleTypeFilter) return false;
@@ -339,7 +384,8 @@ export default function Home() {
   // Margin counts — based on pre-margin-filtered data so counts stay stable
   const marginCounts = useMemo(() => {
     const base = z0Data.filter((r) => {
-      if (statusFilter === "ALL") { if (r.status !== "NI" && r.status !== "IN" && r.status !== "PO") return false; }
+      if (statusFilter === "ALL") { if (r.status !== "NI" && r.status !== "IN" && r.status !== "POST_ACABADO" && r.status !== "PO") return false; }
+      else if (statusFilter === "IN") { if (r.status !== "IN" && r.status !== "POST_ACABADO") return false; }
       else if (r.status !== statusFilter) return false;
       if (customerFilter !== "ALL" && r.po_customer_name?.trim() !== customerFilter) return false;
       if (styleTypeFilter !== "ALL" && r.style_type !== styleTypeFilter) return false;
@@ -362,7 +408,8 @@ export default function Home() {
 
   const summary = useMemo(() => {
     const ni = filtered.filter((r) => r.status === "NI").length;
-    const inP = filtered.filter((r) => r.status === "IN").length;
+    const inP = filtered.filter((r) => r.status === "IN" || r.status === "POST_ACABADO").length;
+    const postAcabado = filtered.filter((r) => r.status === "POST_ACABADO").length;
     const po = filtered.filter((r) => r.status === "PO").length;
     const totalQty = filtered.reduce((a, r) => a + (Number(r.pol_requested_q) || 0), 0);
     const totalUSD = filtered.reduce((a, r) => a + (Number(r.pol_amount_usd) || 0), 0);
@@ -375,10 +422,11 @@ export default function Home() {
     const avgQty = filtered.length > 0 ? Math.round(totalQty / filtered.length) : 0;
 
     // Costo vs Ingreso por status (solo OPs con precio Y cotizador)
-    const calcCostoIngreso = (status: string) => {
+    const calcCostoIngresoMulti = (statuses: string[]) => {
       let ingreso = 0, costo = 0, ops = 0;
+      const set = new Set(statuses);
       for (const r of filtered) {
-        if (r.status !== status) continue;
+        if (!set.has(r.status)) continue;
         const c = getCostoCotiz(r.cotizador);
         const ing = Number(r.pol_amount_usd) || 0;
         const qty = Number(r.pol_requested_q) || 0;
@@ -389,10 +437,10 @@ export default function Home() {
       }
       return { ingreso, costo, margen: ingreso - costo, ops };
     };
-    const inCostoIng = calcCostoIngreso("IN");
-    const niCostoIng = calcCostoIngreso("NI");
+    const inCostoIng = calcCostoIngresoMulti(["IN", "POST_ACABADO"]);
+    const niCostoIng = calcCostoIngresoMulti(["NI"]);
 
-    return { ni, inP, po, total: filtered.length, totalQty, totalUSD, conCotiz, sinCotiz, conPrecio, sinPrecio, vencidas, avgQty, inCostoIng, niCostoIng };
+    return { ni, inP, postAcabado, po, total: filtered.length, totalQty, totalUSD, conCotiz, sinCotiz, conPrecio, sinPrecio, vencidas, avgQty, inCostoIng, niCostoIng };
   }, [filtered]);
 
   // suppress unused var warnings
@@ -458,7 +506,7 @@ export default function Home() {
                     <p className="text-base md:text-lg font-bold text-[#821417] break-words">{fmtUSD(g.data.costo)}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] text-gray-400 mb-1">Margen estimado</p>
+                    <p className="text-[11px] text-gray-400 mb-1">Margen Neto estimado</p>
                     <p className={`text-base md:text-lg font-bold break-words ${g.data.margen >= 0 ? "text-emerald-600" : "text-red-600"}`}>
                       {g.data.margen >= 0 ? "+" : ""}{fmtUSD(g.data.margen)}
                       <span className="text-[11px] font-normal text-gray-400 ml-1">
@@ -475,9 +523,9 @@ export default function Home() {
         {/* Status Tabs */}
         <div className="flex flex-wrap gap-2 mb-3">
           {[
-            { key: "ALL", label: "Todos", count: z0Data.filter(r => r.status === "NI" || r.status === "IN" || r.status === "PO").length, color: "gray" },
+            { key: "ALL", label: "Todos", count: z0Data.filter(r => r.status === "NI" || r.status === "IN" || r.status === "POST_ACABADO" || r.status === "PO").length, color: "gray" },
             { key: "NI", label: "No Iniciadas", count: z0Data.filter(r => r.status === "NI").length, color: "amber" },
-            { key: "IN", label: "En Produccion", count: z0Data.filter(r => r.status === "IN").length, color: "emerald" },
+            { key: "IN", label: "En Produccion", count: z0Data.filter(r => r.status === "IN" || r.status === "POST_ACABADO").length, color: "emerald" },
             { key: "PO", label: "Solo PO", count: z0Data.filter(r => r.status === "PO").length, color: "red" },
           ].map((tab) => {
             const active = statusFilter === tab.key;
@@ -506,7 +554,7 @@ export default function Home() {
           </div>
           <FSelect label="Cliente" value={customerFilter} options={customers} onChange={setCustomerFilter} />
           <FSelect label="Tipo" value={styleTypeFilter} options={["nuevo", "recurrente"]} onChange={setStyleTypeFilter} />
-          <FSelect label="Mes Produccion" value={prodMonthFilter} options={prodMonths} onChange={setProdMonthFilter} />
+          {statusFilter !== "NI" && <FSelect label="Mes Inicio Produccion" value={prodMonthFilter} options={prodMonths} onChange={setProdMonthFilter} />}
           <FSelect label="Mes Due Date" value={dueMonthFilter} options={dueMonths} onChange={setDueMonthFilter} />
           <button onClick={() => { setStatusFilter("ALL"); setCustomerFilter("ALL"); setStyleTypeFilter("ALL"); setMarginFilter("ALL"); setProdMonthFilter("ALL"); setDueMonthFilter("ALL"); setSearchTerm(""); }}
             className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">Limpiar</button>
@@ -515,12 +563,12 @@ export default function Home() {
         {/* Margin Classification Bar */}
         {!loading && !error && (marginCounts.saludable > 0 || marginCounts.atencion > 0 || marginCounts.critico > 0) && (
           <div className="mb-5">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">Clasificacion por margen</p>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2.5">Clasificacion por Margen Neto</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {[
-                { key: "saludable" as const, count: marginCounts.saludable, label: "Saludable", sub: "Margen >= 10%", bg: marginFilter === "saludable" ? "bg-green-600" : "bg-green-500", cardBg: marginFilter === "saludable" ? "bg-green-50 border-green-300 shadow-md" : "bg-white border-gray-200 hover:border-green-300", textColor: "text-green-800" },
-                { key: "atencion" as const, count: marginCounts.atencion, label: "Atencion", sub: "Margen 0% - 9.9%", bg: marginFilter === "atencion" ? "bg-amber-600" : "bg-amber-500", cardBg: marginFilter === "atencion" ? "bg-amber-50 border-amber-300 shadow-md" : "bg-white border-gray-200 hover:border-amber-300", textColor: "text-amber-800" },
-                { key: "critico" as const, count: marginCounts.critico, label: "Critico", sub: "Margen negativo", bg: marginFilter === "critico" ? "bg-red-700" : "bg-red-600", cardBg: marginFilter === "critico" ? "bg-red-50 border-red-300 shadow-md" : "bg-white border-gray-200 hover:border-red-300", textColor: "text-red-800" },
+                { key: "saludable" as const, count: marginCounts.saludable, label: "Saludable", sub: "Margen neto >= 10%", bg: marginFilter === "saludable" ? "bg-green-600" : "bg-green-500", cardBg: marginFilter === "saludable" ? "bg-green-50 border-green-300 shadow-md" : "bg-white border-gray-200 hover:border-green-300", textColor: "text-green-800" },
+                { key: "atencion" as const, count: marginCounts.atencion, label: "Atencion", sub: "Margen neto 0% - 9.9%", bg: marginFilter === "atencion" ? "bg-amber-600" : "bg-amber-500", cardBg: marginFilter === "atencion" ? "bg-amber-50 border-amber-300 shadow-md" : "bg-white border-gray-200 hover:border-amber-300", textColor: "text-amber-800" },
+                { key: "critico" as const, count: marginCounts.critico, label: "Critico", sub: "Margen neto negativo", bg: marginFilter === "critico" ? "bg-red-700" : "bg-red-600", cardBg: marginFilter === "critico" ? "bg-red-50 border-red-300 shadow-md" : "bg-white border-gray-200 hover:border-red-300", textColor: "text-red-800" },
               ].map(item => (
                 <button key={item.key}
                   onClick={() => setMarginFilter(prev => prev === item.key ? "ALL" : item.key)}
@@ -556,9 +604,18 @@ export default function Home() {
           <>
             <div className="flex items-center justify-between mb-2.5 px-0.5">
               <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Ordenes de Produccion</p>
-              <p className="text-[11px] text-gray-400">
-                {fmtNum(filtered.length)} registros
-              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-[11px] text-gray-400">{fmtNum(filtered.length)} registros</p>
+                <button
+                  onClick={() => exportToCSV(filtered as Z0Row[], `pipeline_${statusFilter === "ALL" ? "todas" : statusFilter}_${new Date().toISOString().slice(0,10)}`)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-medium transition-colors"
+                  title="Exportar a CSV">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                  </svg>
+                  Exportar CSV
+                </button>
+              </div>
             </div>
             <TableCard count={filtered.length} page={page} totalPages={totalPages} onPage={setPage}>
               <Z0Table rows={(selectedOrder ? (paged as Z0Row[]).filter(r => r.order_id === selectedOrder) : paged as Z0Row[])} selectedOrder={selectedOrder} onSelect={loadMaterials} sortCol={sortCol} sortDir={sortDir} onSort={toggleSort} lastWipByOrder={lastWipByOrder} />
@@ -666,7 +723,7 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
 
     const topMarcas = Object.entries(marcaMap).sort((a, b) => b[1] - a[1]).slice(0, 7).map(([name, value]) => ({ name, value }));
     const scatterNI = scatterData.filter(s => s.status === "NI");
-    const scatterIN = scatterData.filter(s => s.status === "IN");
+    const scatterIN = scatterData.filter(s => s.status === "IN" || s.status === "POST_ACABADO");
     const scatterOther = scatterData.filter(s => s.status !== "NI" && s.status !== "IN");
     const marcaBarData = topMarcas.map(m => ({
       name: m.name.length > 10 ? m.name.slice(0, 10) + "\u2026" : m.name,
@@ -762,7 +819,7 @@ function AnalyticsSection({ data, onSelectOp, selectedOrder }: { data: Z0Row[]; 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
           {/* Rentabilidad neta por cliente */}
           <div className={`${cardBase} bg-white border-gray-100`}>
-            <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Rentabilidad neta por cliente</p>
+            <p className="text-[11px] font-bold text-gray-900 uppercase tracking-wider">Margen Neto por cliente</p>
             <p className="text-[11px] text-gray-400 mb-3 mt-0.5"><span className="text-emerald-600 font-medium">Verde = neto positivo</span> &middot; <span className="text-red-500 font-medium">Rojo = perdida neta</span></p>
             {analytics.conPrecio === 0 ? <div className="h-[240px] flex items-center justify-center text-[11px] text-gray-300">Sin datos de precio para este filtro</div> :
             <ResponsiveContainer width="100%" height={240}>
@@ -1001,7 +1058,7 @@ const Z0Table = memo(({ rows, selectedOrder, onSelect, sortCol, sortDir, onSort,
         <th className={`${thGroup} bg-red-50/50`} colSpan={8}></th>
         <th className={`${thGroup} bg-slate-50 text-slate-500 ${borderL}`} colSpan={3}>Real</th>
         <th className={`${thGroup} bg-red-50/30 text-[#821417] ${borderL}`} colSpan={3}>Cotizador</th>
-        <th className={`${thGroup} bg-white ${borderL}`} colSpan={2}>Margen</th>
+        <th className={`${thGroup} bg-emerald-50 text-emerald-700 ${borderL}`} colSpan={2}>Margen Neto</th>
       </tr>
       {/* Fila 2: columnas */}
       <tr>
@@ -1019,7 +1076,7 @@ const Z0Table = memo(({ rows, selectedOrder, onSelect, sortCol, sortDir, onSort,
         <SortTh col="costo_cotiz" label="C. Unit." sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
         <SortTh col="costo_total" label="Costo Total" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
         <SortTh col="precio_cotiz" label="P. Sugerido" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
-        <SortTh col="margen" label="Margen" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
+        <SortTh col="margen" label="Margen Neto" sortCol={sortCol} sortDir={sortDir} onSort={onSort} right />
         <SortTh col="due_date" label="Due Date" sortCol={sortCol} sortDir={sortDir} onSort={onSort} />
       </tr>
     </thead>
